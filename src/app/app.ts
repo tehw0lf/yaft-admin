@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
+import { COMMA, ENTER } from '@angular/cdk/keycodes';
 
 // Angular Material Imports
 import { MatStepperModule } from '@angular/material/stepper';
@@ -19,9 +20,16 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatChipInputEvent } from '@angular/material/chips';
 import { HttpClientModule } from '@angular/common/http';
 
 import { YaftProviderService } from './services/yaft-provider.service';
+import { FilterService } from './services/filter.service';
+import { ExportService } from './services/export.service';
+import { ErrorHandlerService } from './services/error-handler.service';
+import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
+import { timeRangeValidator } from './validators/time-range.validator';
 import {
   Feature,
   ProviderType,
@@ -49,7 +57,9 @@ import {
     MatMenuModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatDialogModule,
+    FeatureFiltersComponent
   ],
   selector: 'app-root',
   templateUrl: './app.html',
@@ -69,7 +79,8 @@ export class App implements OnInit, OnDestroy {
   };
   
   features: Feature[] = [];
-  displayedColumns: string[] = ['key', 'status', 'value', 'activeAt', 'disabledAt', 'actions'];
+  filteredFeatures: Feature[] = [];
+  displayedColumns: string[] = ['key', 'status', 'value', 'activeAt', 'disabledAt', 'tags', 'actions'];
   
   // UI State
   isConnecting = false;
@@ -77,11 +88,17 @@ export class App implements OnInit, OnDestroy {
   isCreating = false;
   alertMessage = '';
   alertType: 'success' | 'error' = 'success';
+  
+  // Chip input configuration
+  readonly separatorKeysCodes = [ENTER, COMMA] as const;
 
   constructor(
     private fb: FormBuilder,
     private yaftService: YaftProviderService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private filterService: FilterService,
+    private exportService: ExportService,
+    private errorHandler: ErrorHandlerService
   ) {
     this.connectionForm = this.createConnectionForm();
     this.featureForm = this.createFeatureForm();
@@ -101,6 +118,13 @@ export class App implements OnInit, OnDestroy {
       .subscribe(features => {
         this.features = features;
         this.isLoading = false;
+      });
+    
+    // Subscribe to filtered features
+    this.filterService.filteredFeatures$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(filteredFeatures => {
+        this.filteredFeatures = filteredFeatures;
       });
   }
 
@@ -123,7 +147,10 @@ export class App implements OnInit, OnDestroy {
       key: ['', Validators.required],
       value: ['false', Validators.required],
       activeAt: [''],
-      disabledAt: ['']
+      disabledAt: [''],
+      tags: [[]]
+    }, { 
+      validators: [timeRangeValidator()] 
     });
   }
 
@@ -188,7 +215,8 @@ export class App implements OnInit, OnDestroy {
       key: formValue.key,
       value: formValue.value,
       activeAt: formValue.activeAt || null,
-      disabledAt: formValue.disabledAt || null
+      disabledAt: formValue.disabledAt || null,
+      tags: formValue.tags || []
     };
 
     this.yaftService.createFeature(feature)
@@ -197,7 +225,7 @@ export class App implements OnInit, OnDestroy {
         next: (newFeature) => {
           this.isCreating = false;
           this.showAlert(`Feature '${newFeature.key}' created successfully`, 'success');
-          this.featureForm.reset({ value: 'false' });
+          this.featureForm.reset({ value: 'false', tags: [] });
           
           // Show secret if created via API
           if (newFeature.secret) {
@@ -261,7 +289,8 @@ export class App implements OnInit, OnDestroy {
       key: feature.key,
       value: feature.value,
       activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString().slice(0, 16) : '',
-      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : ''
+      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : '',
+      tags: feature.tags || []
     });
     
     this.showAlert('Feature loaded in form for editing. Note: Key cannot be changed.', 'success');
@@ -294,12 +323,148 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
+  // Tag management methods
+  addTag(event: MatChipInputEvent): void {
+    const value = (event.value || '').trim();
+    
+    if (value) {
+      const currentTags = this.featureForm.get('tags')?.value || [];
+      if (!currentTags.includes(value)) {
+        currentTags.push(value);
+        this.featureForm.patchValue({ tags: currentTags });
+      }
+    }
+    
+    event.chipInput!.clear();
+  }
+
+  removeTag(tag: string): void {
+    const currentTags = this.featureForm.get('tags')?.value || [];
+    const index = currentTags.indexOf(tag);
+
+    if (index >= 0) {
+      currentTags.splice(index, 1);
+      this.featureForm.patchValue({ tags: currentTags });
+    }
+  }
+
+  // Export/Import methods
+  onExportJson(): void {
+    const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
+    this.exportService.exportToJson(features);
+    this.errorHandler.showSuccessNotification(`Exported ${features.length} features to JSON`);
+  }
+
+  onExportCsv(): void {
+    const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
+    this.exportService.exportToCsv(features);
+    this.errorHandler.showSuccessNotification(`Exported ${features.length} features to CSV`);
+  }
+
+  onImportFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    
+    if (file) {
+      this.errorHandler.showInfoNotification('Importing features...');
+      
+      this.exportService.importFromFile(file).then(result => {
+        if (result.success) {
+          this.errorHandler.showSuccessNotification(
+            `Successfully imported ${result.features.length} features`
+          );
+          
+          if (result.warnings.length > 0) {
+            console.warn('Import warnings:', result.warnings);
+            result.warnings.forEach(warning => 
+              this.errorHandler.showWarningNotification(warning, 2000)
+            );
+          }
+          
+          // TODO: Show import preview dialog and allow user to confirm
+          this.showImportPreview(result.features);
+        } else {
+          this.errorHandler.showErrorNotification(
+            `Import failed: ${result.errors.join(', ')}`
+          );
+        }
+        
+        // Clear the input
+        input.value = '';
+      });
+    }
+  }
+
+  private showImportPreview(features: Feature[]): void {
+    // For now, just show a simple confirmation
+    // In a full implementation, this would show a dialog with feature preview
+    const confirmed = confirm(
+      `Import ${features.length} features? This will add them to your current provider.`
+    );
+    
+    if (confirmed) {
+      this.importFeatures(features);
+    }
+  }
+
+  private importFeatures(features: Feature[]): void {
+    let importedCount = 0;
+    const errors: string[] = [];
+
+    // Import features one by one to handle errors gracefully
+    const importNext = (index: number) => {
+      if (index >= features.length) {
+        // All done
+        if (importedCount > 0) {
+          this.errorHandler.showSuccessNotification(
+            `Successfully imported ${importedCount} features`
+          );
+          this.onRefresh();
+        }
+        if (errors.length > 0) {
+          this.errorHandler.showErrorNotification(
+            `Failed to import ${errors.length} features`
+          );
+        }
+        return;
+      }
+
+      const feature = features[index];
+      this.yaftService.createFeature(feature)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            importedCount++;
+            importNext(index + 1);
+          },
+          error: (error) => {
+            errors.push(`${feature.key}: ${error.message}`);
+            importNext(index + 1);
+          }
+        });
+    };
+
+    importNext(0);
+  }
+
   getFeatureStatus(feature: Feature): FeatureStatus {
     return this.yaftService.getFeatureStatus(feature);
   }
 
   hasSecret(feature: Feature): boolean {
     return !!feature.secret;
+  }
+
+  get timeRangeError(): string | null {
+    const errors = this.featureForm.errors;
+    if (errors?.['timeRangeInvalid']) {
+      return errors['timeRangeInvalid'].message;
+    }
+    return null;
+  }
+
+  getTags(feature: Feature): string[] {
+    return feature.tags || [];
   }
 
   private copyToClipboard(text: string) {

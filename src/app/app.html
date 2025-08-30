@@ -117,6 +117,33 @@
                 </mat-form-field>
               </div>
 
+              <!-- Tags Input -->
+              <div class="form-row">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Tags (Optional)</mat-label>
+                  <mat-chip-grid #chipGrid aria-label="Feature tags">
+                    <mat-chip-row *ngFor="let tag of featureForm.get('tags')?.value || []"
+                                  (removed)="removeTag(tag)">
+                      {{tag}}
+                      <button matChipRemove>
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </mat-chip-row>
+                  </mat-chip-grid>
+                  <input placeholder="Add tags..."
+                         [matChipInputFor]="chipGrid"
+                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                         (matChipInputTokenEnd)="addTag($event)">
+                  <mat-hint>Press Enter or comma to add tags</mat-hint>
+                </mat-form-field>
+              </div>
+
+              <!-- Form Validation Errors -->
+              <div *ngIf="timeRangeError" class="form-error">
+                <mat-icon>error</mat-icon>
+                <span>{{timeRangeError}}</span>
+              </div>
+
               <div class="actions">
                 <button mat-raised-button color="primary" type="submit" 
                         [disabled]="featureForm.invalid || isCreating">
@@ -129,12 +156,40 @@
           </mat-card-content>
         </mat-card>
 
+        <!-- Search and Filters -->
+        <app-feature-filters></app-feature-filters>
+
         <!-- Features List -->
         <mat-card class="features-list-card">
           <mat-card-header>
             <mat-card-title>Feature Toggles</mat-card-title>
             <div class="header-actions">
-              <button mat-icon-button (click)="onRefresh()" [disabled]="isLoading">
+              <!-- Export/Import Actions -->
+              <button mat-icon-button [matMenuTriggerFor]="exportMenu" 
+                      [disabled]="features.length === 0"
+                      matTooltip="Export features">
+                <mat-icon>download</mat-icon>
+              </button>
+              <mat-menu #exportMenu="matMenu">
+                <button mat-menu-item (click)="onExportJson()">
+                  <mat-icon>data_object</mat-icon>
+                  Export as JSON
+                </button>
+                <button mat-menu-item (click)="onExportCsv()">
+                  <mat-icon>table_chart</mat-icon>
+                  Export as CSV
+                </button>
+              </mat-menu>
+
+              <input type="file" #fileInput (change)="onImportFile($event)" 
+                     accept=".json,.csv" style="display: none;">
+              <button mat-icon-button (click)="fileInput.click()" 
+                      matTooltip="Import features">
+                <mat-icon>upload</mat-icon>
+              </button>
+
+              <button mat-icon-button (click)="onRefresh()" [disabled]="isLoading"
+                      matTooltip="Refresh features">
                 <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
               </button>
             </div>
@@ -151,7 +206,7 @@
               <p>Create your first feature toggle above</p>
             </div>
 
-            <mat-table *ngIf="!isLoading && features.length > 0" [dataSource]="features" class="features-table">
+            <mat-table *ngIf="!isLoading && features.length > 0" [dataSource]="filteredFeatures.length > 0 ? filteredFeatures : features" class="features-table">
               <ng-container matColumnDef="key">
                 <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
                 <mat-cell *matCellDef="let feature">
@@ -191,6 +246,20 @@
                 <mat-header-cell *matHeaderCellDef>Disabled At</mat-header-cell>
                 <mat-cell *matCellDef="let feature">
                   {{feature.disabledAt ? (feature.disabledAt | date:'short') : '-'}}
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="tags">
+                <mat-header-cell *matHeaderCellDef>Tags</mat-header-cell>
+                <mat-cell *matCellDef="let feature">
+                  <div class="tags-container" *ngIf="getTags(feature).length > 0; else noTags">
+                    <mat-chip-set>
+                      <mat-chip *ngFor="let tag of getTags(feature)">{{tag}}</mat-chip>
+                    </mat-chip-set>
+                  </div>
+                  <ng-template #noTags>
+                    <span class="no-tags">-</span>
+                  </ng-template>
                 </mat-cell>
               </ng-container>
 

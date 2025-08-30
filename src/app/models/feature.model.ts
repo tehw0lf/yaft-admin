@@ -4,6 +4,7 @@ export interface Feature {
   activeAt?: string | null;
   disabledAt?: string | null;
   secret?: string;
+  tags?: string[];
 }
 
 export interface FeatureToggleResponse {
@@ -13,6 +14,7 @@ export interface FeatureToggleResponse {
   disabledAt?: string | null;
   secret?: string;
   collectionHash?: string;
+  tags?: string[];
 }
 
 export interface CollectionHashResponse {
@@ -45,4 +47,14 @@ export interface FeatureStatus {
   status: 'active' | 'inactive' | 'scheduled';
   activeAt?: Date | null;
   disabledAt?: Date | null;
+}
+
+export interface FeatureFilter {
+  searchText: string;
+  status: string[];
+  tags: string[];
+  dateRange: {
+    start: Date | null;
+    end: Date | null;
+  };
 }

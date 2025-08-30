@@ -1,11 +1,10 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { 
   Feature, 
   FeatureToggleResponse, 
-  CollectionHashResponse, 
   FeaturesResponse, 
   ProviderType, 
   ProviderConnection,
@@ -173,7 +172,8 @@ export class YaftProviderService {
           value: response.value,
           activeAt: response.activeAt,
           disabledAt: response.disabledAt,
-          secret: response.secret
+          secret: response.secret,
+          tags: response.tags || []
         };
         
         // Update local features list
@@ -194,7 +194,8 @@ export class YaftProviderService {
       const currentFeatures = this.featuresSubject.value;
       const newFeature: Feature = {
         ...feature,
-        secret: this.generateMockSecret()
+        secret: this.generateMockSecret(),
+        tags: feature.tags || []
       };
       
       const updatedFeatures = [...currentFeatures, newFeature];
