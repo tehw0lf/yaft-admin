@@ -69,6 +69,16 @@ import { MatMenuModule } from '@angular/material/menu';
               <span matListItemTitle>Features</span>
             </a>
             
+            <a mat-list-item routerLink="/templates" routerLinkActive="active">
+              <mat-icon matListItemIcon>description</mat-icon>
+              <span matListItemTitle>Templates</span>
+            </a>
+            
+            <a mat-list-item routerLink="/analytics" routerLinkActive="active">
+              <mat-icon matListItemIcon>analytics</mat-icon>
+              <span matListItemTitle>Analytics</span>
+            </a>
+            
             <mat-divider></mat-divider>
             
             <div class="nav-section-header">

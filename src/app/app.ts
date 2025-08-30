@@ -30,6 +30,7 @@ import { FilterService } from './services/filter.service';
 import { ExportService } from './services/export.service';
 import { ErrorHandlerService } from './services/error-handler.service';
 import { BulkOperationsService } from './services/bulk-operations.service';
+import { WebSocketService } from './services/websocket.service';
 import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
 import { timeRangeValidator } from './validators/time-range.validator';
 import {
@@ -107,7 +108,8 @@ export class App implements OnInit, OnDestroy {
     private filterService: FilterService,
     private exportService: ExportService,
     private errorHandler: ErrorHandlerService,
-    private bulkOperationsService: BulkOperationsService
+    private bulkOperationsService: BulkOperationsService,
+    private websocketService: WebSocketService
   ) {
     this.connectionForm = this.createConnectionForm();
     this.featureForm = this.createFeatureForm();
@@ -119,6 +121,12 @@ export class App implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(connection => {
         this.connectionStatus = connection;
+        
+        // Connect WebSocket when YAFT connection is established
+        if (connection.isConnected && connection.apiUrl) {
+          const wsUrl = connection.apiUrl.replace(/^http/, 'ws') + '/ws';
+          this.websocketService.connect(wsUrl);
+        }
       });
 
     // Subscribe to features
@@ -134,6 +142,16 @@ export class App implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(filteredFeatures => {
         this.filteredFeatures = filteredFeatures;
+      });
+    
+    // Subscribe to WebSocket feature updates
+    this.websocketService.featureUpdates$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(update => {
+        // Refresh features when remote updates occur
+        if (this.connectionStatus.isConnected) {
+          this.yaftService.loadFeatures();
+        }
       });
   }
 
@@ -236,6 +254,11 @@ export class App implements OnInit, OnDestroy {
           this.showAlert(`Feature '${newFeature.key}' created successfully`, 'success');
           this.featureForm.reset({ value: 'false', tags: [] });
           
+          // Send WebSocket notification
+          if (this.websocketService.isConnected()) {
+            this.websocketService.notifyFeatureUpdate(newFeature, 'create');
+          }
+          
           // Show secret if created via API
           if (newFeature.secret) {
             this.snackBar.open(`Secret: ${newFeature.secret}`, 'Copy', {
@@ -281,9 +304,14 @@ export class App implements OnInit, OnDestroy {
     this.yaftService.updateFeature(feature.key, updates, feature.secret)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
+        next: (updatedFeature) => {
           this.showAlert(`Feature '${feature.key}' ${enabled ? 'enabled' : 'disabled'}`, 'success');
           this.onRefresh();
+          
+          // Send WebSocket notification
+          if (this.websocketService.isConnected()) {
+            this.websocketService.notifyFeatureUpdate(updatedFeature || feature, 'update');
+          }
         },
         error: (error) => {
           this.showAlert(`Failed to update feature: ${error.message}`, 'error');
@@ -317,6 +345,11 @@ export class App implements OnInit, OnDestroy {
         .subscribe({
           next: () => {
             this.showAlert(`Feature '${feature.key}' deleted successfully`, 'success');
+            
+            // Send WebSocket notification
+            if (this.websocketService.isConnected()) {
+              this.websocketService.notifyFeatureUpdate(feature, 'delete');
+            }
           },
           error: (error) => {
             this.showAlert(`Failed to delete feature: ${error.message}`, 'error');
