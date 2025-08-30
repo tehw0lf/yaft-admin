@@ -1,1 +1,59 @@
 /* You can add global styles to this file, and also import other style files */
+@import 'https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap';
+@import 'https://fonts.googleapis.com/icon?family=Material+Icons';
+
+// Global styles
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
+}
+
+html, body {
+  height: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.status-chip {
+  &.status-active {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  
+  &.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  &.status-scheduled {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 32px;
+  
+  h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #6f42c1;
+    margin-bottom: 8px;
+  }
+  
+  p {
+    color: #86868b;
+    font-size: 1.1rem;
+  }
+}
