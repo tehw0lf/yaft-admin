@@ -8,6 +8,7 @@ body {
   font-family: 'Roboto', sans-serif;
   background-color: #f5f5f7;
   color: #1d1d1f;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html, body {
@@ -55,5 +56,117 @@ html, body {
   p {
     color: #86868b;
     font-size: 1.1rem;
+  }
+}
+
+// Dark Theme
+body.dark-theme {
+  background-color: #121212;
+  color: #ffffff;
+  
+  .mat-card {
+    background-color: #1e1e1e;
+    color: #ffffff;
+  }
+  
+  .mat-toolbar {
+    background-color: #1f1f1f !important;
+    color: #ffffff;
+  }
+  
+  .mat-form-field {
+    .mat-form-field-label {
+      color: #cccccc;
+    }
+    
+    .mat-input-element {
+      color: #ffffff;
+    }
+    
+    .mat-form-field-underline {
+      background-color: #666666;
+    }
+  }
+  
+  .mat-button, .mat-raised-button, .mat-flat-button {
+    color: #ffffff;
+  }
+  
+  .mat-raised-button:not([disabled]) {
+    background-color: #333333;
+  }
+  
+  .mat-table {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    
+    .mat-header-cell {
+      color: #cccccc;
+      border-bottom-color: #333333;
+    }
+    
+    .mat-cell {
+      border-bottom-color: #333333;
+    }
+    
+    .mat-row:hover {
+      background-color: #2a2a2a;
+    }
+  }
+  
+  .mat-chip {
+    background-color: #333333;
+    color: #ffffff;
+    
+    &.status-active {
+      background-color: #2e7d32;
+      color: #ffffff;
+    }
+    
+    &.status-inactive {
+      background-color: #d32f2f;
+      color: #ffffff;
+    }
+    
+    &.status-scheduled {
+      background-color: #f57c00;
+      color: #ffffff;
+    }
+  }
+  
+  .mat-select-panel {
+    background-color: #2a2a2a;
+  }
+  
+  .mat-option {
+    color: #ffffff;
+    
+    &:hover {
+      background-color: #333333;
+    }
+  }
+  
+  .mat-menu-panel {
+    background-color: #2a2a2a;
+  }
+  
+  .mat-menu-item {
+    color: #ffffff;
+    
+    &:hover {
+      background-color: #333333;
+    }
+  }
+  
+  .alert-card {
+    &.alert-success {
+      background-color: #1b4332;
+      border-left-color: #4caf50;
+    }
+    
+    &.alert-error {
+      background-color: #4a1a1a;
+      border-left-color: #f44336;
+    }
   }
 }

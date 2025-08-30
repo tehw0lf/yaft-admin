@@ -21,6 +21,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipInputEvent } from '@angular/material/chips';
 import { HttpClientModule } from '@angular/common/http';
 
@@ -28,6 +29,7 @@ import { YaftProviderService } from './services/yaft-provider.service';
 import { FilterService } from './services/filter.service';
 import { ExportService } from './services/export.service';
 import { ErrorHandlerService } from './services/error-handler.service';
+import { BulkOperationsService } from './services/bulk-operations.service';
 import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
 import { timeRangeValidator } from './validators/time-range.validator';
 import {
@@ -59,6 +61,7 @@ import {
     MatSnackBarModule,
     MatTooltipModule,
     MatDialogModule,
+    MatCheckboxModule,
     FeatureFiltersComponent
   ],
   selector: 'app-root',
@@ -80,7 +83,7 @@ export class App implements OnInit, OnDestroy {
   
   features: Feature[] = [];
   filteredFeatures: Feature[] = [];
-  displayedColumns: string[] = ['key', 'status', 'value', 'activeAt', 'disabledAt', 'tags', 'actions'];
+  displayedColumns: string[] = ['select', 'key', 'status', 'value', 'activeAt', 'disabledAt', 'tags', 'actions'];
   
   // UI State
   isConnecting = false;
@@ -88,6 +91,11 @@ export class App implements OnInit, OnDestroy {
   isCreating = false;
   alertMessage = '';
   alertType: 'success' | 'error' = 'success';
+  
+  // Bulk operations
+  selectedFeatures = new Set<Feature>();
+  isAllSelected = false;
+  isBulkOperating = false;
   
   // Chip input configuration
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
@@ -98,7 +106,8 @@ export class App implements OnInit, OnDestroy {
     private snackBar: MatSnackBar,
     private filterService: FilterService,
     private exportService: ExportService,
-    private errorHandler: ErrorHandlerService
+    private errorHandler: ErrorHandlerService,
+    private bulkOperationsService: BulkOperationsService
   ) {
     this.connectionForm = this.createConnectionForm();
     this.featureForm = this.createFeatureForm();
@@ -465,6 +474,201 @@ export class App implements OnInit, OnDestroy {
 
   getTags(feature: Feature): string[] {
     return feature.tags || [];
+  }
+
+  // Bulk Operations Methods
+  toggleAllSelection(): void {
+    if (this.isAllSelected) {
+      this.selectedFeatures.clear();
+    } else {
+      const operableFeatures = this.bulkOperationsService.getOperableFeatures(this.filteredFeatures);
+      operableFeatures.forEach(feature => this.selectedFeatures.add(feature));
+    }
+    this.updateSelectionState();
+  }
+
+  toggleFeatureSelection(feature: Feature): void {
+    if (this.selectedFeatures.has(feature)) {
+      this.selectedFeatures.delete(feature);
+    } else {
+      this.selectedFeatures.add(feature);
+    }
+    this.updateSelectionState();
+  }
+
+  isFeatureSelected(feature: Feature): boolean {
+    return this.selectedFeatures.has(feature);
+  }
+
+  updateSelectionState(): void {
+    const operableFeatures = this.bulkOperationsService.getOperableFeatures(this.filteredFeatures);
+    this.isAllSelected = operableFeatures.length > 0 && 
+                        operableFeatures.every(feature => this.selectedFeatures.has(feature));
+  }
+
+  getSelectedCount(): number {
+    return this.selectedFeatures.size;
+  }
+
+  canPerformBulkActions(): boolean {
+    return this.selectedFeatures.size > 0 && !this.isBulkOperating;
+  }
+
+  // Bulk Action Methods
+  onBulkEnable(): void {
+    this.performBulkOperation('enable', 'Enabling features...');
+  }
+
+  onBulkDisable(): void {
+    this.performBulkOperation('disable', 'Disabling features...');
+  }
+
+  onBulkDelete(): void {
+    const confirmed = confirm(
+      `Are you sure you want to delete ${this.selectedFeatures.size} selected features? This action cannot be undone.`
+    );
+    
+    if (confirmed) {
+      this.performBulkOperation('delete', 'Deleting features...');
+    }
+  }
+
+  onBulkExport(): void {
+    const selectedArray = Array.from(this.selectedFeatures);
+    this.bulkOperationsService.exportFeatures(selectedArray);
+  }
+
+  onBulkAddTags(): void {
+    const tagsInput = prompt('Enter tags to add (comma-separated):');
+    if (tagsInput) {
+      const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+      if (tags.length > 0) {
+        this.performBulkTagOperation('add', tags);
+      }
+    }
+  }
+
+  onBulkRemoveTags(): void {
+    // Get all unique tags from selected features
+    const allTags = new Set<string>();
+    this.selectedFeatures.forEach(feature => {
+      if (feature.tags) {
+        feature.tags.forEach(tag => allTags.add(tag));
+      }
+    });
+
+    if (allTags.size === 0) {
+      this.errorHandler.showWarningNotification('Selected features have no tags to remove');
+      return;
+    }
+
+    const tagsArray = Array.from(allTags).sort();
+    const message = `Available tags: ${tagsArray.join(', ')}\n\nEnter tags to remove (comma-separated):`;
+    const tagsInput = prompt(message);
+    
+    if (tagsInput) {
+      const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+      if (tags.length > 0) {
+        this.performBulkTagOperation('remove', tags);
+      }
+    }
+  }
+
+  private performBulkOperation(operation: 'enable' | 'disable' | 'delete', loadingMessage: string): void {
+    this.isBulkOperating = true;
+    this.errorHandler.showInfoNotification(loadingMessage);
+
+    const selectedArray = Array.from(this.selectedFeatures);
+    let operationObservable;
+
+    switch (operation) {
+      case 'enable':
+        operationObservable = this.bulkOperationsService.enableFeatures(selectedArray);
+        break;
+      case 'disable':
+        operationObservable = this.bulkOperationsService.disableFeatures(selectedArray);
+        break;
+      case 'delete':
+        operationObservable = this.bulkOperationsService.deleteFeatures(selectedArray);
+        break;
+    }
+
+    operationObservable
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.isBulkOperating = false;
+          
+          if (result.success > 0) {
+            this.errorHandler.showSuccessNotification(
+              `Successfully ${operation}d ${result.success} features`
+            );
+          }
+          
+          if (result.failed > 0) {
+            this.errorHandler.showWarningNotification(
+              `Failed to ${operation} ${result.failed} features`
+            );
+            console.warn('Bulk operation errors:', result.errors);
+          }
+
+          // Clear selection and refresh
+          this.selectedFeatures.clear();
+          this.updateSelectionState();
+          this.onRefresh();
+        },
+        error: (error) => {
+          this.isBulkOperating = false;
+          this.errorHandler.showErrorNotification(`Bulk ${operation} operation failed: ${error.message}`);
+        }
+      });
+  }
+
+  private performBulkTagOperation(operation: 'add' | 'remove', tags: string[]): void {
+    this.isBulkOperating = true;
+    const actionName = operation === 'add' ? 'Adding' : 'Removing';
+    this.errorHandler.showInfoNotification(`${actionName} tags...`);
+
+    const selectedArray = Array.from(this.selectedFeatures);
+    const operationObservable = operation === 'add' 
+      ? this.bulkOperationsService.addTagsToFeatures(selectedArray, tags)
+      : this.bulkOperationsService.removeTagsFromFeatures(selectedArray, tags);
+
+    operationObservable
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.isBulkOperating = false;
+          
+          if (result.success > 0) {
+            const verb = operation === 'add' ? 'added to' : 'removed from';
+            this.errorHandler.showSuccessNotification(
+              `Successfully ${verb} ${result.success} features`
+            );
+          }
+          
+          if (result.failed > 0) {
+            const verb = operation === 'add' ? 'add to' : 'remove from';
+            this.errorHandler.showWarningNotification(
+              `Failed to ${verb} ${result.failed} features`
+            );
+          }
+
+          // Clear selection and refresh
+          this.selectedFeatures.clear();
+          this.updateSelectionState();
+          this.onRefresh();
+        },
+        error: (error) => {
+          this.isBulkOperating = false;
+          this.errorHandler.showErrorNotification(`Bulk tag operation failed: ${error.message}`);
+        }
+      });
+  }
+
+  // Helper method to check if a feature can be selected for bulk operations
+  canSelectFeature(feature: Feature): boolean {
+    return !!feature.secret;
   }
 
   private copyToClipboard(text: string) {

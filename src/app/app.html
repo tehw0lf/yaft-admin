@@ -159,6 +159,52 @@
         <!-- Search and Filters -->
         <app-feature-filters></app-feature-filters>
 
+        <!-- Bulk Actions Bar -->
+        <mat-card *ngIf="getSelectedCount() > 0" class="bulk-actions-card">
+          <mat-card-content>
+            <div class="bulk-actions-bar">
+              <div class="bulk-selection-info">
+                <mat-icon>check_box</mat-icon>
+                <span>{{getSelectedCount()}} feature(s) selected</span>
+                <button mat-button (click)="selectedFeatures.clear(); updateSelectionState()">
+                  Clear Selection
+                </button>
+              </div>
+              <div class="bulk-actions">
+                <button mat-raised-button color="primary" (click)="onBulkEnable()" 
+                        [disabled]="!canPerformBulkActions()">
+                  <mat-icon>toggle_on</mat-icon>
+                  Enable
+                </button>
+                <button mat-raised-button (click)="onBulkDisable()" 
+                        [disabled]="!canPerformBulkActions()">
+                  <mat-icon>toggle_off</mat-icon>
+                  Disable
+                </button>
+                <button mat-raised-button (click)="onBulkAddTags()" 
+                        [disabled]="!canPerformBulkActions()">
+                  <mat-icon>add</mat-icon>
+                  Add Tags
+                </button>
+                <button mat-raised-button (click)="onBulkRemoveTags()" 
+                        [disabled]="!canPerformBulkActions()">
+                  <mat-icon>remove</mat-icon>
+                  Remove Tags
+                </button>
+                <button mat-raised-button (click)="onBulkExport()">
+                  <mat-icon>download</mat-icon>
+                  Export Selected
+                </button>
+                <button mat-raised-button color="warn" (click)="onBulkDelete()" 
+                        [disabled]="!canPerformBulkActions()">
+                  <mat-icon>delete</mat-icon>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
         <!-- Features List -->
         <mat-card class="features-list-card">
           <mat-card-header>
@@ -207,6 +253,27 @@
             </div>
 
             <mat-table *ngIf="!isLoading && features.length > 0" [dataSource]="filteredFeatures.length > 0 ? filteredFeatures : features" class="features-table">
+              <!-- Selection Column -->
+              <ng-container matColumnDef="select">
+                <mat-header-cell *matHeaderCellDef>
+                  <mat-checkbox (change)="toggleAllSelection()"
+                                [checked]="isAllSelected"
+                                [indeterminate]="getSelectedCount() > 0 && !isAllSelected"
+                                matTooltip="Select all features with secrets">
+                  </mat-checkbox>
+                </mat-header-cell>
+                <mat-cell *matCellDef="let feature">
+                  <mat-checkbox *ngIf="canSelectFeature(feature)"
+                                [checked]="isFeatureSelected(feature)"
+                                (change)="toggleFeatureSelection(feature)">
+                  </mat-checkbox>
+                  <div *ngIf="!canSelectFeature(feature)" class="no-selection" 
+                       matTooltip="Feature cannot be selected (no secret)">
+                    <mat-icon>lock</mat-icon>
+                  </div>
+                </mat-cell>
+              </ng-container>
+
               <ng-container matColumnDef="key">
                 <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
                 <mat-cell *matCellDef="let feature">
