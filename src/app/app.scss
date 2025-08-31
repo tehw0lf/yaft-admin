@@ -20,8 +20,119 @@
 }
 
 .create-feature-card,
-.features-list-card {
+.features-list-card,
+.import-guidance-card,
+.actions-card {
   margin-bottom: 24px;
+}
+
+.import-guidance-card {
+  background: linear-gradient(135deg, #e3f2fd, #f1f8e9);
+  border-left: 4px solid #2196f3;
+  
+  .mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #1976d2;
+    
+    mat-icon {
+      color: #4caf50;
+    }
+  }
+  
+  ol {
+    margin: 16px 0;
+    padding-left: 20px;
+    
+    li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+  }
+  
+  em {
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+.local-storage-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #28a745;
+  
+  mat-icon {
+    color: #28a745;
+    margin-top: 2px;
+  }
+  
+  div {
+    flex: 1;
+    
+    p {
+      margin: 0;
+      line-height: 1.4;
+      
+      &:first-child {
+        font-weight: 500;
+        color: #2d5a2f;
+        margin-bottom: 4px;
+      }
+      
+      &:last-child {
+        color: #6c757d;
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+.actions-card {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-left: 4px solid #6c757d;
+  
+  .mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #495057;
+    
+    mat-icon {
+      color: #6c757d;
+    }
+  }
+  
+  .management-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
+    
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
 }
 
 .features-list-card {
@@ -315,5 +426,24 @@
   .info-snackbar .mat-mdc-snack-bar-surface {
     background: #2196f3;
     color: white;
+  }
+}
+
+
+// Ensure proper spacing for provider type select specifically
+.mat-mdc-form-field {
+  &.full-width {
+    width: 100%;
+  }
+  
+  .mat-mdc-select-trigger {
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .mat-mdc-select-value {
+    line-height: 1.4;
+    max-width: 100%;
   }
 }

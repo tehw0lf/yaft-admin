@@ -40,11 +40,13 @@
             </div>
 
             <div *ngIf="!isApiProvider" class="form-section">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Configuration Path</mat-label>
-                <input matInput formControlName="configPath" placeholder="./config.json">
-                <mat-hint>Path to your local configuration file</mat-hint>
-              </mat-form-field>
+              <div class="local-storage-info">
+                <mat-icon>info</mat-icon>
+                <div>
+                  <p><strong>Local Storage Mode</strong></p>
+                  <p>Features will be stored in your browser. You can import existing JSON configurations after connecting.</p>
+                </div>
+              </div>
             </div>
 
             <div class="actions">
@@ -78,13 +80,90 @@
       </div>
 
       <div *ngIf="connectionStatus.isConnected">
+        <!-- Local Storage Import Guidance -->
+        <mat-card *ngIf="isLocalStorageProvider && features.length === 0" class="import-guidance-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>info</mat-icon>
+              Import Existing Features
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>You're connected to a local storage provider. To load existing features from your JSON configuration file:</p>
+            <ol>
+              <li>Use the <strong>Import</strong> button in the features section below</li>
+              <li>Select your JSON file (supports both boolean and feature object formats)</li>
+              <li>Your features will be imported and saved to browser storage</li>
+            </ol>
+            <p><em>Note: Changes made in this UI won't be written back to your original file due to browser security restrictions.</em></p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Import/Export Actions -->
+        <mat-card class="actions-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>settings</mat-icon>
+              Manage Features
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="management-actions">
+              <!-- Export Actions -->
+              <button mat-raised-button [matMenuTriggerFor]="exportMenu" 
+                      [disabled]="features.length === 0"
+                      color="primary">
+                <mat-icon>download</mat-icon>
+                Export Features
+              </button>
+              <mat-menu #exportMenu="matMenu">
+                <button mat-menu-item (click)="onExportJson()">
+                  <mat-icon>data_object</mat-icon>
+                  <span *ngIf="isBooleanProvider">Export as Boolean JSON</span>
+                  <span *ngIf="isFeatureObjectProvider">Export as Feature JSON</span>
+                </button>
+                <button mat-menu-item (click)="onExportCsv()">
+                  <mat-icon>table_chart</mat-icon>
+                  <span *ngIf="isBooleanProvider">Export as Boolean CSV</span>
+                  <span *ngIf="isFeatureObjectProvider">Export as Feature CSV</span>
+                </button>
+              </mat-menu>
+
+              <!-- Import Actions -->
+              <input type="file" #fileInput (change)="onImportFile($event)" 
+                     accept=".json,.csv" style="display: none;">
+              <button mat-raised-button (click)="fileInput.click()">
+                <mat-icon>upload</mat-icon>
+                Import Features
+              </button>
+
+              <!-- Refresh Actions -->
+              <button mat-raised-button (click)="onRefresh()" [disabled]="isLoading">
+                <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
+                Refresh Features
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
         <!-- Create Feature Form -->
         <mat-card class="create-feature-card">
           <mat-card-header>
-            <mat-card-title>Create New Feature Toggle</mat-card-title>
+            <mat-card-title>
+              <span *ngIf="!isEditing && isBooleanProvider">Create New Boolean Toggle</span>
+              <span *ngIf="!isEditing && isFeatureObjectProvider">Create New Feature Toggle</span>
+              <span *ngIf="isEditing">Edit Feature: {{editingFeature?.key}}</span>
+            </mat-card-title>
+            <mat-card-subtitle *ngIf="isBooleanProvider">
+              Simple key-value boolean toggles only
+            </mat-card-subtitle>
+            <mat-card-subtitle *ngIf="isFeatureObjectProvider">
+              Advanced features with scheduling, tags, and metadata
+            </mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <form [formGroup]="featureForm" (ngSubmit)="onCreateFeature()">
+              <!-- Basic fields for both types -->
               <div class="form-row">
                 <mat-form-field appearance="outline">
                   <mat-label>Feature Key</mat-label>
@@ -95,15 +174,16 @@
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Initial Value</mat-label>
+                  <mat-label>{{isBooleanProvider ? 'Boolean Value' : 'Initial Value'}}</mat-label>
                   <mat-select formControlName="value">
-                    <mat-option value="true">Enabled</mat-option>
-                    <mat-option value="false">Disabled</mat-option>
+                    <mat-option value="true">{{isBooleanProvider ? 'True' : 'Enabled'}}</mat-option>
+                    <mat-option value="false">{{isBooleanProvider ? 'False' : 'Disabled'}}</mat-option>
                   </mat-select>
                 </mat-form-field>
               </div>
 
-              <div class="form-row">
+              <!-- Advanced fields only for feature object providers -->
+              <div *ngIf="isFeatureObjectProvider" class="form-row">
                 <mat-form-field appearance="outline">
                   <mat-label>Activate At (Optional)</mat-label>
                   <input matInput formControlName="activeAt" type="datetime-local">
@@ -117,8 +197,8 @@
                 </mat-form-field>
               </div>
 
-              <!-- Tags Input -->
-              <div class="form-row">
+              <!-- Tags Input - only for feature object providers -->
+              <div *ngIf="isFeatureObjectProvider" class="form-row">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Tags (Optional)</mat-label>
                   <mat-chip-grid #chipGrid aria-label="Feature tags">
@@ -138,8 +218,8 @@
                 </mat-form-field>
               </div>
 
-              <!-- Form Validation Errors -->
-              <div *ngIf="timeRangeError" class="form-error">
+              <!-- Form Validation Errors - only for feature object providers -->
+              <div *ngIf="timeRangeError && isFeatureObjectProvider" class="form-error">
                 <mat-icon>error</mat-icon>
                 <span>{{timeRangeError}}</span>
               </div>
@@ -148,8 +228,15 @@
                 <button mat-raised-button color="primary" type="submit" 
                         [disabled]="featureForm.invalid || isCreating">
                   <mat-icon *ngIf="isCreating">sync</mat-icon>
-                  <span *ngIf="!isCreating">Create Feature</span>
-                  <span *ngIf="isCreating">Creating...</span>
+                  <span *ngIf="!isCreating && !isEditing">Create Feature</span>
+                  <span *ngIf="!isCreating && isEditing">Update Feature</span>
+                  <span *ngIf="isCreating && !isEditing">Creating...</span>
+                  <span *ngIf="isCreating && isEditing">Updating...</span>
+                </button>
+                
+                <button *ngIf="isEditing" mat-button type="button" (click)="onCancelEdit()">
+                  <mat-icon>cancel</mat-icon>
+                  Cancel Edit
                 </button>
               </div>
             </form>
@@ -209,36 +296,6 @@
         <mat-card class="features-list-card">
           <mat-card-header>
             <mat-card-title>Feature Toggles</mat-card-title>
-            <div class="header-actions">
-              <!-- Export/Import Actions -->
-              <button mat-icon-button [matMenuTriggerFor]="exportMenu" 
-                      [disabled]="features.length === 0"
-                      matTooltip="Export features">
-                <mat-icon>download</mat-icon>
-              </button>
-              <mat-menu #exportMenu="matMenu">
-                <button mat-menu-item (click)="onExportJson()">
-                  <mat-icon>data_object</mat-icon>
-                  Export as JSON
-                </button>
-                <button mat-menu-item (click)="onExportCsv()">
-                  <mat-icon>table_chart</mat-icon>
-                  Export as CSV
-                </button>
-              </mat-menu>
-
-              <input type="file" #fileInput (change)="onImportFile($event)" 
-                     accept=".json,.csv" style="display: none;">
-              <button mat-icon-button (click)="fileInput.click()" 
-                      matTooltip="Import features">
-                <mat-icon>upload</mat-icon>
-              </button>
-
-              <button mat-icon-button (click)="onRefresh()" [disabled]="isLoading"
-                      matTooltip="Refresh features">
-                <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
-              </button>
-            </div>
           </mat-card-header>
           <mat-card-content>
             <div *ngIf="isLoading" class="loading-container">
@@ -355,8 +412,8 @@
                 </mat-cell>
               </ng-container>
 
-              <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-              <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+              <mat-header-row *matHeaderRowDef="currentDisplayedColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: currentDisplayedColumns;"></mat-row>
             </mat-table>
           </mat-card-content>
         </mat-card>
@@ -380,4 +437,3 @@
   </mat-card>
 </div>
 
-<router-outlet></router-outlet>

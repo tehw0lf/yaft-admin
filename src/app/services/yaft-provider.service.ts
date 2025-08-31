@@ -55,9 +55,10 @@ export class YaftProviderService {
       map(() => {
         connection.isConnected = true;
         this.connectionSubject.next(connection);
-        if (connection.baseUUID) {
-          this.loadFeatures();
-        }
+        // Always load features on successful connection
+        this.loadFeatures().subscribe({
+          error: (error) => console.warn('Failed to load initial features:', error)
+        });
         return true;
       }),
       catchError((error) => {
@@ -70,10 +71,15 @@ export class YaftProviderService {
 
   private connectToLocalStorage(connection: ProviderConnection): Observable<boolean> {
     // For local storage, we simulate a connection test
-    // In a real implementation, this might validate file access or structure
+    // Note: Browser security prevents direct file system access
     connection.isConnected = true;
     this.connectionSubject.next(connection);
-    this.loadFeatures();
+    
+    // Try to load features, but don't fail if none exist yet
+    this.loadFeatures().subscribe({
+      error: (error) => console.warn('No existing local features found:', error)
+    });
+    
     return of(true);
   }
 
@@ -120,17 +126,66 @@ export class YaftProviderService {
   }
 
   private loadFromLocalStorage(): Observable<Feature[]> {
-    // For local storage provider, we would typically read from a JSON file
-    // Since we're in browser environment, we'll use localStorage or simulate file reading
+    // For local storage provider, we use browser localStorage
+    // Note: Actual file reading requires user to import via file picker
     try {
-      const storedFeatures = localStorage.getItem('yaft-features');
-      const features: Feature[] = storedFeatures ? JSON.parse(storedFeatures) : [];
+      // Use a simple storage key for local storage features
+      const storageKey = 'yaft-admin-features';
+      const storedData = localStorage.getItem(storageKey);
+      
+      let features: Feature[] = [];
+      
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        
+        if (Array.isArray(parsedData)) {
+          // Direct array format
+          features = parsedData;
+        } else if (typeof parsedData === 'object') {
+          // Object format - convert using same logic as import
+          features = this.convertObjectToFeatures(parsedData);
+        }
+      }
+      
       this.featuresSubject.next(features);
       return of(features);
     } catch (error) {
       console.error('Failed to load from local storage:', error);
       return throwError(() => error);
     }
+  }
+
+  private convertObjectToFeatures(data: any): Feature[] {
+    const features: Feature[] = [];
+    
+    for (const [key, value] of Object.entries(data)) {
+      try {
+        if (typeof value === 'boolean' || value === 'true' || value === 'false') {
+          // Boolean format: { "toggleName": true }
+          features.push({
+            key: key,
+            value: value === true || value === 'true' ? 'true' : 'false',
+            activeAt: null,
+            disabledAt: null,
+            tags: []
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
+          const featureObj = value as any;
+          features.push({
+            key: featureObj.key || key,
+            value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
+            activeAt: featureObj.activeAt || null,
+            disabledAt: featureObj.disabledAt || null,
+            tags: Array.isArray(featureObj.tags) ? featureObj.tags : []
+          });
+        }
+      } catch (error) {
+        console.warn(`Failed to convert feature '${key}':`, error);
+      }
+    }
+    
+    return features;
   }
 
   // CRUD Operations
@@ -199,7 +254,7 @@ export class YaftProviderService {
       };
       
       const updatedFeatures = [...currentFeatures, newFeature];
-      localStorage.setItem('yaft-features', JSON.stringify(updatedFeatures));
+      localStorage.setItem('yaft-admin-features', JSON.stringify(updatedFeatures));
       this.featuresSubject.next(updatedFeatures);
       
       return of(newFeature);
@@ -232,16 +287,46 @@ export class YaftProviderService {
       return throwError(() => new Error('API URL and secret are required'));
     }
 
-    // YaFT API has specific endpoints for different operations
-    if (updates.value === 'true') {
-      return this.activateFeature(key, secret);
-    } else if (updates.value === 'false') {
-      return this.deactivateFeature(key, secret);
+    // Check if it's just a simple enable/disable operation
+    if (Object.keys(updates).length === 1 && updates.value !== undefined) {
+      if (updates.value === 'true') {
+        return this.activateFeature(key, secret);
+      } else if (updates.value === 'false') {
+        return this.deactivateFeature(key, secret);
+      }
     }
 
-    // For other updates, we might need to use a general update endpoint
-    // This would need to be implemented in the YaFT API
-    return throwError(() => new Error('General feature updates not supported yet'));
+    // For comprehensive updates, try a general update approach
+    // Note: This requires the YaFT API to support comprehensive updates
+    const payload = {
+      value: updates.value,
+      activeAt: updates.activeAt ? new Date(updates.activeAt).toISOString() : null,
+      disabledAt: updates.disabledAt ? new Date(updates.disabledAt).toISOString() : null,
+      tags: updates.tags
+    };
+
+    return this.http.put<FeatureToggleResponse>(`${connection.apiUrl}/features/${key}`, payload, {
+      headers: { 'Authorization': `Bearer ${secret}` }
+    }).pipe(
+      map((response) => ({
+        key: response.key,
+        value: response.value,
+        activeAt: response.activeAt,
+        disabledAt: response.disabledAt,
+        tags: response.tags || [],
+        secret: secret
+      })),
+      catchError((error) => {
+        // Fallback to simple enable/disable if comprehensive update fails
+        console.warn('Comprehensive update failed, falling back to simple toggle:', error);
+        if (updates.value === 'true') {
+          return this.activateFeature(key, secret);
+        } else if (updates.value === 'false') {
+          return this.deactivateFeature(key, secret);
+        }
+        return throwError(() => new Error('Feature update not supported by API'));
+      })
+    );
   }
 
   private updateInLocalStorage(key: string, updates: Partial<Feature>): Observable<Feature> {
@@ -257,7 +342,7 @@ export class YaftProviderService {
       const updatedFeatures = [...currentFeatures];
       updatedFeatures[featureIndex] = updatedFeature;
 
-      localStorage.setItem('yaft-features', JSON.stringify(updatedFeatures));
+      localStorage.setItem('yaft-admin-features', JSON.stringify(updatedFeatures));
       this.featuresSubject.next(updatedFeatures);
 
       return of(updatedFeature);
@@ -308,7 +393,7 @@ export class YaftProviderService {
     try {
       const currentFeatures = this.featuresSubject.value;
       const updatedFeatures = currentFeatures.filter(f => f.key !== key);
-      localStorage.setItem('yaft-features', JSON.stringify(updatedFeatures));
+      localStorage.setItem('yaft-admin-features', JSON.stringify(updatedFeatures));
       this.featuresSubject.next(updatedFeatures);
       return of(void 0);
     } catch (error) {

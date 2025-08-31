@@ -43,6 +43,23 @@ export class ExportService {
     window.URL.revokeObjectURL(url);
   }
 
+  exportBooleanJson(booleanData: Record<string, boolean>): void {
+    const blob = new Blob([JSON.stringify(booleanData, null, 2)], {
+      type: 'application/json'
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `yaft-boolean-toggles-${new Date().toISOString().split('T')[0]}.json`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    window.URL.revokeObjectURL(url);
+  }
+
   exportToCsv(features: Feature[]): void {
     const headers = ['Key', 'Value', 'ActiveAt', 'DisabledAt', 'Tags', 'HasSecret'];
     const csvContent = [
@@ -62,6 +79,29 @@ export class ExportService {
     const link = document.createElement('a');
     link.href = url;
     link.download = `yaft-features-${new Date().toISOString().split('T')[0]}.csv`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    window.URL.revokeObjectURL(url);
+  }
+
+  exportBooleanCsv(features: Feature[]): void {
+    const headers = ['Key', 'Value'];
+    const csvContent = [
+      headers.join(','),
+      ...features.map(feature => [
+        this.escapeCsvField(feature.key),
+        this.escapeCsvField(feature.value === 'true' ? 'true' : 'false')
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `yaft-boolean-toggles-${new Date().toISOString().split('T')[0]}.csv`;
     
     document.body.appendChild(link);
     link.click();
@@ -126,8 +166,14 @@ export class ExportService {
       } else if (Array.isArray(data)) {
         // Direct array of features
         result.features = data;
+      } else if (typeof data === 'object' && data !== null) {
+        // Object format - convert to feature array
+        result.features = this.convertObjectToFeatures(data);
+        if (result.features.length === 0) {
+          result.warnings.push('No valid features found in object format');
+        }
       } else {
-        result.errors.push('Invalid JSON format. Expected array of features or export format.');
+        result.errors.push('Invalid JSON format. Expected array of features, export format, or object with feature keys.');
         return result;
       }
 
@@ -284,6 +330,39 @@ export class ExportService {
     
     result.push(current.trim());
     return result.map(field => field.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"'));
+  }
+
+  private convertObjectToFeatures(data: any): Feature[] {
+    const features: Feature[] = [];
+    
+    for (const [key, value] of Object.entries(data)) {
+      try {
+        if (typeof value === 'boolean' || value === 'true' || value === 'false') {
+          // Boolean format: { "toggleName": true }
+          features.push({
+            key: key,
+            value: value === true || value === 'true' ? 'true' : 'false',
+            activeAt: null,
+            disabledAt: null,
+            tags: []
+          });
+        } else if (typeof value === 'object' && value !== null) {
+          // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
+          const featureObj = value as any;
+          features.push({
+            key: featureObj.key || key,
+            value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
+            activeAt: featureObj.activeAt || null,
+            disabledAt: featureObj.disabledAt || null,
+            tags: Array.isArray(featureObj.tags) ? featureObj.tags : []
+          });
+        }
+      } catch (error) {
+        console.warn(`Failed to convert feature '${key}':`, error);
+      }
+    }
+    
+    return features;
   }
 
   private escapeCsvField(field: string): string {

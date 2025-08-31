@@ -1,5 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { MatStepper } from '@angular/material/stepper';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
@@ -70,6 +71,7 @@ import {
   styleUrl: './app.scss',
 })
 export class App implements OnInit, OnDestroy {
+  @ViewChild('stepper') stepper!: MatStepper;
   private destroy$ = new Subject<void>();
 
   // Form Controls
@@ -85,11 +87,20 @@ export class App implements OnInit, OnDestroy {
   features: Feature[] = [];
   filteredFeatures: Feature[] = [];
   displayedColumns: string[] = ['select', 'key', 'status', 'value', 'activeAt', 'disabledAt', 'tags', 'actions'];
+
+  get currentDisplayedColumns(): string[] {
+    if (this.isBooleanProvider) {
+      return ['select', 'key', 'value', 'actions'];
+    }
+    return this.displayedColumns;
+  }
   
   // UI State
   isConnecting = false;
   isLoading = false;
   isCreating = false;
+  isEditing = false;
+  editingFeature: Feature | null = null;
   alertMessage = '';
   alertType: 'success' | 'error' = 'success';
   
@@ -122,10 +133,21 @@ export class App implements OnInit, OnDestroy {
       .subscribe(connection => {
         this.connectionStatus = connection;
         
-        // Connect WebSocket when YAFT connection is established
-        if (connection.isConnected && connection.apiUrl) {
+        // Update form validation based on provider type
+        if (connection.isConnected) {
+          this.updateFormValidation();
+        }
+        
+        // Connect WebSocket only for API service providers
+        if (connection.isConnected && 
+            connection.apiUrl && 
+            (connection.type === ProviderType.API_SERVICE || connection.type === ProviderType.API_SERVICE_BOOLEAN)) {
           const wsUrl = connection.apiUrl.replace(/^http/, 'ws') + '/ws';
           this.websocketService.connect(wsUrl);
+        } else if (connection.isConnected && 
+                  (connection.type === ProviderType.LOCAL_STORAGE || connection.type === ProviderType.LOCAL_STORAGE_BOOLEAN)) {
+          // Disconnect WebSocket for local storage providers
+          this.websocketService.disconnect();
         }
       });
 
@@ -163,9 +185,9 @@ export class App implements OnInit, OnDestroy {
   private createConnectionForm(): FormGroup {
     return this.fb.group({
       providerType: [ProviderType.API_SERVICE, Validators.required],
-      apiUrl: ['http://localhost:8080'],
+      apiUrl: ['http://localhost:8080', Validators.required],
       baseUUID: [''],
-      configPath: ['./config.json']
+      configPath: ['']
     });
   }
 
@@ -181,9 +203,50 @@ export class App implements OnInit, OnDestroy {
     });
   }
 
+  private updateFormValidation(): void {
+    // Clear existing validators for optional fields
+    this.featureForm.get('activeAt')?.clearValidators();
+    this.featureForm.get('disabledAt')?.clearValidators();
+    this.featureForm.get('tags')?.clearValidators();
+
+    if (this.isBooleanProvider) {
+      // For boolean providers, disable advanced fields
+      this.featureForm.get('activeAt')?.disable();
+      this.featureForm.get('disabledAt')?.disable();
+      this.featureForm.get('tags')?.disable();
+      // Remove time range validator for boolean providers
+      this.featureForm.clearValidators();
+    } else {
+      // For feature object providers, enable all fields
+      this.featureForm.get('activeAt')?.enable();
+      this.featureForm.get('disabledAt')?.enable();
+      this.featureForm.get('tags')?.enable();
+      // Add time range validator for feature object providers
+      this.featureForm.setValidators([timeRangeValidator()]);
+    }
+
+    // Update validity after changing validators
+    this.featureForm.updateValueAndValidity();
+  }
+
   get isApiProvider(): boolean {
     const providerType = this.connectionForm.get('providerType')?.value;
     return providerType === ProviderType.API_SERVICE || providerType === ProviderType.API_SERVICE_BOOLEAN;
+  }
+
+  get isLocalStorageProvider(): boolean {
+    return this.connectionStatus.type === ProviderType.LOCAL_STORAGE || 
+           this.connectionStatus.type === ProviderType.LOCAL_STORAGE_BOOLEAN;
+  }
+
+  get isBooleanProvider(): boolean {
+    return this.connectionStatus.type === ProviderType.API_SERVICE_BOOLEAN || 
+           this.connectionStatus.type === ProviderType.LOCAL_STORAGE_BOOLEAN;
+  }
+
+  get isFeatureObjectProvider(): boolean {
+    return this.connectionStatus.type === ProviderType.API_SERVICE || 
+           this.connectionStatus.type === ProviderType.LOCAL_STORAGE;
   }
 
   onProviderTypeChange(event: any) {
@@ -193,8 +256,9 @@ export class App implements OnInit, OnDestroy {
       this.connectionForm.get('apiUrl')?.setValidators([Validators.required]);
       this.connectionForm.get('configPath')?.clearValidators();
     } else {
-      this.connectionForm.get('configPath')?.setValidators([Validators.required]);
+      // Local storage doesn't require any specific configuration
       this.connectionForm.get('apiUrl')?.clearValidators();
+      this.connectionForm.get('configPath')?.clearValidators();
     }
     
     this.connectionForm.get('apiUrl')?.updateValueAndValidity();
@@ -207,11 +271,14 @@ export class App implements OnInit, OnDestroy {
     this.isConnecting = true;
     const formValue = this.connectionForm.value;
     
+    const isApiProvider = formValue.providerType === ProviderType.API_SERVICE || 
+                        formValue.providerType === ProviderType.API_SERVICE_BOOLEAN;
+    
     const connection: ProviderConnection = {
       type: formValue.providerType,
-      apiUrl: formValue.apiUrl,
-      baseUUID: formValue.baseUUID,
-      configPath: formValue.configPath,
+      apiUrl: isApiProvider ? formValue.apiUrl : undefined,
+      baseUUID: isApiProvider ? formValue.baseUUID : undefined,
+      configPath: !isApiProvider ? formValue.configPath : undefined,
       isConnected: false
     };
 
@@ -221,8 +288,15 @@ export class App implements OnInit, OnDestroy {
         next: (success) => {
           this.isConnecting = false;
           if (success) {
-            this.showAlert('Successfully connected to data source', 'success');
+            this.showAlert('Data source connected, redirecting to feature toggles...', 'success');
             this.onRefresh();
+            
+            // Auto-advance to feature toggles step after a brief delay
+            setTimeout(() => {
+              if (this.stepper) {
+                this.stepper.next();
+              }
+            }, 1500);
           }
         },
         error: (error) => {
@@ -235,16 +309,28 @@ export class App implements OnInit, OnDestroy {
   onCreateFeature() {
     if (this.featureForm.invalid) return;
 
+    if (this.isEditing && this.editingFeature) {
+      this.onUpdateFeature();
+      return;
+    }
+
     this.isCreating = true;
     const formValue = this.featureForm.value;
     
-    const feature = {
+    const feature: Omit<Feature, 'secret'> = {
       key: formValue.key,
       value: formValue.value,
-      activeAt: formValue.activeAt || null,
-      disabledAt: formValue.disabledAt || null,
-      tags: formValue.tags || []
+      activeAt: null,
+      disabledAt: null,
+      tags: []
     };
+
+    // Only include advanced fields for feature object providers
+    if (this.isFeatureObjectProvider) {
+      feature.activeAt = formValue.activeAt || null;
+      feature.disabledAt = formValue.disabledAt || null;
+      feature.tags = formValue.tags || [];
+    }
 
     this.yaftService.createFeature(feature)
       .pipe(takeUntil(this.destroy$))
@@ -272,6 +358,49 @@ export class App implements OnInit, OnDestroy {
         error: (error) => {
           this.isCreating = false;
           this.showAlert(`Failed to create feature: ${error.message}`, 'error');
+        }
+      });
+  }
+
+  private onUpdateFeature() {
+    if (!this.editingFeature || !this.editingFeature.secret) {
+      this.showAlert('Cannot update feature without secret', 'error');
+      return;
+    }
+
+    this.isCreating = true; // Reuse the same loading state
+    const formValue = this.featureForm.getRawValue(); // Get raw value to include disabled fields
+    
+    const updates: Partial<Feature> = {
+      value: formValue.value
+    };
+
+    // Only include advanced fields for feature object providers
+    if (this.isFeatureObjectProvider) {
+      updates.activeAt = formValue.activeAt || null;
+      updates.disabledAt = formValue.disabledAt || null;
+      updates.tags = formValue.tags || [];
+    }
+
+    this.yaftService.updateFeature(this.editingFeature.key, updates, this.editingFeature.secret)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (updatedFeature) => {
+          this.isCreating = false;
+          this.showAlert(`Feature '${this.editingFeature!.key}' updated successfully`, 'success');
+          
+          // Exit edit mode and reset form
+          this.onCancelEdit();
+          this.onRefresh();
+          
+          // Send WebSocket notification
+          if (this.websocketService.isConnected()) {
+            this.websocketService.notifyFeatureUpdate(updatedFeature || this.editingFeature!, 'update');
+          }
+        },
+        error: (error) => {
+          this.isCreating = false;
+          this.showAlert(`Failed to update feature: ${error.message}`, 'error');
         }
       });
   }
@@ -320,8 +449,10 @@ export class App implements OnInit, OnDestroy {
   }
 
   onEditFeature(feature: Feature) {
-    // For now, just populate the form with the feature data
-    // In a full implementation, this could open a dialog
+    this.isEditing = true;
+    this.editingFeature = feature;
+    
+    // Populate the form with the feature data
     this.featureForm.patchValue({
       key: feature.key,
       value: feature.value,
@@ -330,7 +461,18 @@ export class App implements OnInit, OnDestroy {
       tags: feature.tags || []
     });
     
-    this.showAlert('Feature loaded in form for editing. Note: Key cannot be changed.', 'success');
+    // Disable the key field since we can't change it during edit
+    this.featureForm.get('key')?.disable();
+    
+    this.showAlert('Feature loaded for editing. Click "Update Feature" to save changes.', 'success');
+  }
+
+  onCancelEdit() {
+    this.isEditing = false;
+    this.editingFeature = null;
+    this.featureForm.reset({ value: 'false', tags: [] });
+    this.featureForm.get('key')?.enable();
+    this.showAlert('Edit cancelled', 'success');
   }
 
   onDeleteFeature(feature: Feature) {
@@ -393,14 +535,39 @@ export class App implements OnInit, OnDestroy {
   // Export/Import methods
   onExportJson(): void {
     const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
-    this.exportService.exportToJson(features);
+    const exportData = this.formatFeaturesForExport(features);
+    
+    if (this.isBooleanProvider) {
+      this.exportService.exportBooleanJson(exportData);
+    } else {
+      this.exportService.exportToJson(features);
+    }
+    
     this.errorHandler.showSuccessNotification(`Exported ${features.length} features to JSON`);
   }
 
   onExportCsv(): void {
     const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
-    this.exportService.exportToCsv(features);
+    
+    if (this.isBooleanProvider) {
+      this.exportService.exportBooleanCsv(features);
+    } else {
+      this.exportService.exportToCsv(features);
+    }
+    
     this.errorHandler.showSuccessNotification(`Exported ${features.length} features to CSV`);
+  }
+
+  private formatFeaturesForExport(features: Feature[]): any {
+    if (this.isBooleanProvider) {
+      // For boolean providers, export as simple key-value object
+      const booleanData: Record<string, boolean> = {};
+      features.forEach(feature => {
+        booleanData[feature.key] = feature.value === 'true';
+      });
+      return booleanData;
+    }
+    return features;
   }
 
   onImportFile(event: Event): void {
@@ -721,8 +888,9 @@ export class App implements OnInit, OnDestroy {
     this.alertMessage = message;
     this.alertType = type;
     
-    // Auto-clear after 5 seconds
-    setTimeout(() => this.clearAlert(), 5000);
+    // Auto-clear after different durations based on type
+    const duration = message.includes('redirecting') ? 2000 : 5000;
+    setTimeout(() => this.clearAlert(), duration);
   }
 
   clearAlert() {

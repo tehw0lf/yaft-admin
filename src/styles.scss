@@ -59,6 +59,37 @@ html, body {
   }
 }
 
+// General Material Select styling fixes
+.mat-mdc-select-panel {
+  min-width: 280px;
+  max-height: 300px;
+  --mat-select-panel-background-color: #ffffff;
+  --mat-sys-surface-container: #ffffff;
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
+.mat-mdc-option {
+  min-height: 48px;
+  line-height: 1.4;
+  padding: 8px 16px;
+  white-space: normal;
+  word-wrap: break-word;
+  background-color: #ffffff;
+  color: #333333;
+  
+  &:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .mdc-list-item__primary-text {
+    white-space: normal;
+    line-height: 1.4;
+    color: #333333;
+  }
+}
+
 // Dark Theme
 body.dark-theme {
   background-color: #121212;
@@ -134,12 +165,18 @@ body.dark-theme {
     }
   }
   
-  .mat-select-panel {
-    background-color: #2a2a2a;
+  .mat-select-panel,
+  .mat-mdc-select-panel {
+    --mat-select-panel-background-color: #2a2a2a;
+    --mat-sys-surface-container: #2a2a2a;
+    background-color: #2a2a2a !important;
   }
   
-  .mat-option {
+  .mat-option,
+  .mat-mdc-option {
     color: #ffffff;
+    min-height: 48px;
+    line-height: 1.4;
     
     &:hover {
       background-color: #333333;
