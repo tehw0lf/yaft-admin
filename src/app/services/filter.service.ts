@@ -10,7 +10,6 @@ export class FilterService {
   private filterSubject = new BehaviorSubject<FeatureFilter>({
     searchText: '',
     status: [],
-    tags: [],
     dateRange: {
       start: null,
       end: null
@@ -42,7 +41,6 @@ export class FilterService {
     this.filterSubject.next({
       searchText: '',
       status: [],
-      tags: [],
       dateRange: {
         start: null,
         end: null
@@ -60,11 +58,8 @@ export class FilterService {
       if (filter.searchText) {
         const searchText = filter.searchText.toLowerCase();
         const matchesKey = feature.key.toLowerCase().includes(searchText);
-        const matchesTags = feature.tags?.some(tag => 
-          tag.toLowerCase().includes(searchText)
-        );
         
-        if (!matchesKey && !matchesTags) {
+        if (!matchesKey) {
           return false;
         }
       }
@@ -77,20 +72,6 @@ export class FilterService {
         }
       }
 
-      // Tags filter
-      if (filter.tags.length > 0) {
-        if (!feature.tags || feature.tags.length === 0) {
-          return false;
-        }
-        
-        const hasMatchingTag = filter.tags.some(filterTag =>
-          feature.tags!.includes(filterTag)
-        );
-        
-        if (!hasMatchingTag) {
-          return false;
-        }
-      }
 
       // Date range filter
       if (filter.dateRange.start || filter.dateRange.end) {
@@ -127,15 +108,4 @@ export class FilterService {
     return true;
   }
 
-  // Helper method to get all unique tags from features
-  getAllTags(features: Feature[]): string[] {
-    const allTags = features.reduce<string[]>((acc, feature) => {
-      if (feature.tags) {
-        acc.push(...feature.tags);
-      }
-      return acc;
-    }, []);
-    
-    return [...new Set(allTags)].sort();
-  }
 }

@@ -172,7 +172,6 @@ export class TemplateService {
     const feature: Feature = {
       key: processedKey,
       value: template.value,
-      tags: processedTags,
       activeAt: variables.activation_date ? new Date(variables.activation_date).toISOString() : template.activeAt,
       disabledAt: variables.maintenance_end ? new Date(variables.maintenance_end).toISOString() : template.disabledAt
     };

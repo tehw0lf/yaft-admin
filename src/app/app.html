@@ -37,6 +37,23 @@
                 <input matInput formControlName="baseUUID" placeholder="For collection-based management">
                 <mat-hint>Leave empty for individual feature management</mat-hint>
               </mat-form-field>
+
+              <div class="collection-secret-info">
+                <mat-icon>info</mat-icon>
+                <div>
+                  <p><strong>Collection Secret Management</strong></p>
+                  <ul>
+                    <li><strong>New Collection:</strong> Leave secret empty - one will be generated and cached</li>
+                    <li><strong>Existing Collection:</strong> Enter your collection secret to manage features</li>
+                  </ul>
+                </div>
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Collection Secret (Optional)</mat-label>
+                <input matInput type="password" formControlName="collectionSecret" placeholder="Required for existing collections">
+                <mat-hint>Enter the secret if connecting to an existing collection, leave empty for new collections</mat-hint>
+              </mat-form-field>
             </div>
 
             <div *ngIf="!isApiProvider" class="form-section">
@@ -99,19 +116,39 @@
           </mat-card-content>
         </mat-card>
 
-        <!-- Import/Export Actions -->
-        <mat-card class="actions-card">
+        <!-- Import/Export Actions with Drag & Drop -->
+        <mat-card class="actions-card" 
+                  appDragDrop 
+                  (filesDropped)="onFilesDropped($event)"
+                  (dragOver)="onDragOver($event)"
+                  [class.drag-over-active]="isDragOverActive">
           <mat-card-header>
             <mat-card-title>
               <mat-icon>settings</mat-icon>
               Manage Features
             </mat-card-title>
+            <mat-card-subtitle *ngIf="!isDragOverActive">
+              Export, import, or drag & drop files to manage your features
+            </mat-card-subtitle>
+            <mat-card-subtitle *ngIf="isDragOverActive" class="drag-subtitle">
+              <mat-icon>upload</mat-icon>
+              Drop your JSON or CSV file here to import features
+            </mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <div class="management-actions">
+            <!-- Drag & Drop Overlay -->
+            <div *ngIf="isDragOverActive" class="drag-drop-overlay">
+              <div class="drag-drop-content">
+                <mat-icon class="drag-icon">cloud_upload</mat-icon>
+                <h3>Drop to Import Features</h3>
+                <p>Supports JSON and CSV files</p>
+              </div>
+            </div>
+
+            <div class="management-actions" [class.dragging]="isDragOverActive">
               <!-- Export Actions -->
               <button mat-raised-button [matMenuTriggerFor]="exportMenu" 
-                      [disabled]="features.length === 0"
+                      [disabled]="features.length === 0 || isDragOverActive"
                       color="primary">
                 <mat-icon>download</mat-icon>
                 Export Features
@@ -132,16 +169,24 @@
               <!-- Import Actions -->
               <input type="file" #fileInput (change)="onImportFile($event)" 
                      accept=".json,.csv" style="display: none;">
-              <button mat-raised-button (click)="fileInput.click()">
+              <button mat-raised-button (click)="fileInput.click()" 
+                      [disabled]="isDragOverActive">
                 <mat-icon>upload</mat-icon>
                 Import Features
               </button>
 
               <!-- Refresh Actions -->
-              <button mat-raised-button (click)="onRefresh()" [disabled]="isLoading">
+              <button mat-raised-button (click)="onRefresh()" 
+                      [disabled]="isLoading || isDragOverActive">
                 <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
                 Refresh Features
               </button>
+            </div>
+
+            <!-- Drag & Drop Help Text -->
+            <div *ngIf="!isDragOverActive" class="drag-help-text">
+              <mat-icon class="help-icon">info</mat-icon>
+              <span>Tip: You can also drag and drop JSON or CSV files directly onto this area to import features</span>
             </div>
           </mat-card-content>
         </mat-card>
@@ -158,7 +203,7 @@
               Simple key-value boolean toggles only
             </mat-card-subtitle>
             <mat-card-subtitle *ngIf="isFeatureObjectProvider">
-              Advanced features with scheduling, tags, and metadata
+              Advanced features with scheduling and metadata
             </mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
@@ -197,26 +242,6 @@
                 </mat-form-field>
               </div>
 
-              <!-- Tags Input - only for feature object providers -->
-              <div *ngIf="isFeatureObjectProvider" class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Tags (Optional)</mat-label>
-                  <mat-chip-grid #chipGrid aria-label="Feature tags">
-                    <mat-chip-row *ngFor="let tag of featureForm.get('tags')?.value || []"
-                                  (removed)="removeTag(tag)">
-                      {{tag}}
-                      <button matChipRemove>
-                        <mat-icon>cancel</mat-icon>
-                      </button>
-                    </mat-chip-row>
-                  </mat-chip-grid>
-                  <input placeholder="Add tags..."
-                         [matChipInputFor]="chipGrid"
-                         [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                         (matChipInputTokenEnd)="addTag($event)">
-                  <mat-hint>Press Enter or comma to add tags</mat-hint>
-                </mat-form-field>
-              </div>
 
               <!-- Form Validation Errors - only for feature object providers -->
               <div *ngIf="timeRangeError && isFeatureObjectProvider" class="form-error">
@@ -267,16 +292,6 @@
                         [disabled]="!canPerformBulkActions()">
                   <mat-icon>toggle_off</mat-icon>
                   Disable
-                </button>
-                <button mat-raised-button (click)="onBulkAddTags()" 
-                        [disabled]="!canPerformBulkActions()">
-                  <mat-icon>add</mat-icon>
-                  Add Tags
-                </button>
-                <button mat-raised-button (click)="onBulkRemoveTags()" 
-                        [disabled]="!canPerformBulkActions()">
-                  <mat-icon>remove</mat-icon>
-                  Remove Tags
                 </button>
                 <button mat-raised-button (click)="onBulkExport()">
                   <mat-icon>download</mat-icon>
@@ -373,19 +388,6 @@
                 </mat-cell>
               </ng-container>
 
-              <ng-container matColumnDef="tags">
-                <mat-header-cell *matHeaderCellDef>Tags</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <div class="tags-container" *ngIf="getTags(feature).length > 0; else noTags">
-                    <mat-chip-set>
-                      <mat-chip *ngFor="let tag of getTags(feature)">{{tag}}</mat-chip>
-                    </mat-chip-set>
-                  </div>
-                  <ng-template #noTags>
-                    <span class="no-tags">-</span>
-                  </ng-template>
-                </mat-cell>
-              </ng-container>
 
               <ng-container matColumnDef="actions">
                 <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>

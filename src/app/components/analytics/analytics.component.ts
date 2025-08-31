@@ -864,26 +864,8 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       }
     };
     
-    // Tag analytics
-    const tagCounts = new Map<string, number>();
-    features.forEach(feature => {
-      if (feature.tags) {
-        feature.tags.forEach(tag => {
-          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-        });
-      }
-    });
-    
-    const totalTaggedFeatures = Array.from(tagCounts.values()).reduce((sum, count) => sum + count, 0);
-    
-    this.analyticsData.tagAnalytics = Array.from(tagCounts.entries())
-      .map(([tag, count]) => ({
-        tag,
-        count,
-        percentage: totalTaggedFeatures > 0 ? Math.round((count / totalTaggedFeatures) * 100) : 0
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    // Tag analytics (removed - not supported by YaFT library)
+    this.analyticsData.tagAnalytics = [];
     
     // Activity metrics (simulated based on current data)
     const now = new Date();

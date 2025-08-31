@@ -3,8 +3,6 @@ export interface Feature {
   value: string;
   activeAt?: string | null;
   disabledAt?: string | null;
-  secret?: string;
-  tags?: string[];
 }
 
 export interface FeatureToggleResponse {
@@ -12,9 +10,8 @@ export interface FeatureToggleResponse {
   value: string;
   activeAt?: string | null;
   disabledAt?: string | null;
-  secret?: string;
   collectionHash?: string;
-  tags?: string[];
+  secret?: string; // Only returned on new collection creation
 }
 
 export interface CollectionHashResponse {
@@ -52,9 +49,19 @@ export interface FeatureStatus {
 export interface FeatureFilter {
   searchText: string;
   status: string[];
-  tags: string[];
   dateRange: {
     start: Date | null;
     end: Date | null;
   };
+}
+
+// Separate interface for managing secrets (not part of feature data)
+export interface FeatureSecret {
+  key: string;
+  secret: string;
+}
+
+// Extended feature interface for admin UI that includes secret management
+export interface FeatureWithSecret extends Feature {
+  secret?: string; // Only available in admin UI, never returned from API
 }

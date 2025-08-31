@@ -56,7 +56,7 @@ import { FeatureFilter } from '../../models/feature.model';
             <mat-form-field appearance="outline" class="search-field">
               <mat-label>Search Features</mat-label>
               <input matInput formControlName="searchText" 
-                     placeholder="Search by key or tags...">
+                     placeholder="Search by key...">
               <mat-icon matPrefix>search</mat-icon>
               <button mat-icon-button matSuffix 
                       *ngIf="filterForm.get('searchText')?.value"
@@ -78,17 +78,6 @@ import { FeatureFilter } from '../../models/feature.model';
           </div>
 
           <div class="filter-row">
-            <!-- Tags Filter -->
-            <mat-form-field appearance="outline">
-              <mat-label>Tags</mat-label>
-              <mat-select formControlName="tags" multiple>
-                <mat-option *ngFor="let tag of availableTags" [value]="tag">
-                  {{tag}}
-                </mat-option>
-              </mat-select>
-              <mat-hint>Filter by feature tags</mat-hint>
-            </mat-form-field>
-
             <!-- Date Range -->
             <div class="date-range-container">
               <mat-form-field appearance="outline">
@@ -170,7 +159,6 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   
   filterForm: FormGroup;
-  availableTags: string[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -191,12 +179,6 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
         this.updateFilters(formValue);
       });
 
-    // Subscribe to features to update available tags
-    this.yaftService.features$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(features => {
-        this.availableTags = this.filterService.getAllTags(features);
-      });
 
     // Initialize form with current filter values
     this.filterService.filter$
@@ -205,7 +187,6 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
         this.filterForm.patchValue({
           searchText: filter.searchText,
           status: filter.status,
-          tags: filter.tags,
           dateStart: filter.dateRange.start,
           dateEnd: filter.dateRange.end
         }, { emitEvent: false });
@@ -221,7 +202,6 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     return this.fb.group({
       searchText: [''],
       status: [[]],
-      tags: [[]],
       dateStart: [null],
       dateEnd: [null]
     });
@@ -231,7 +211,6 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     const filter: FeatureFilter = {
       searchText: formValue.searchText || '',
       status: formValue.status || [],
-      tags: formValue.tags || [],
       dateRange: {
         start: formValue.dateStart,
         end: formValue.dateEnd
@@ -254,7 +233,6 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     return !!(
       filter.searchText ||
       filter.status.length > 0 ||
-      filter.tags.length > 0 ||
       filter.dateRange.start ||
       filter.dateRange.end
     );

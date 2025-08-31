@@ -178,14 +178,6 @@ export interface DashboardMetrics {
                     {{getFeatureStatus(feature).status | titlecase}}
                   </mat-chip>
                 </div>
-                <div class="feature-tags" *ngIf="feature.tags && feature.tags.length > 0">
-                  <mat-chip-set>
-                    <mat-chip *ngFor="let tag of feature.tags.slice(0, 2)">{{tag}}</mat-chip>
-                    <mat-chip *ngIf="feature.tags.length > 2" class="more-tags">
-                      +{{feature.tags.length - 2}}
-                    </mat-chip>
-                  </mat-chip-set>
-                </div>
               </div>
             </mat-card-content>
           </mat-card>
@@ -699,20 +691,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
       .slice(0, 5);
     
-    // Most used tags
-    const tagCounts = new Map<string, number>();
-    features.forEach(feature => {
-      if (feature.tags) {
-        feature.tags.forEach(tag => {
-          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-        });
-      }
-    });
-    
-    this.metrics.mostUsedTags = Array.from(tagCounts.entries())
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+    // Most used tags (removed - not supported by YaFT library)
+    this.metrics.mostUsedTags = [];
   }
 
   getStatusClass(): string {

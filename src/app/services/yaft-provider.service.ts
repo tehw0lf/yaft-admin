@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { 
   Feature, 
+  FeatureWithSecret,
   FeatureToggleResponse, 
   FeaturesResponse, 
   ProviderType, 
@@ -20,7 +21,8 @@ export class YaftProviderService {
     isConnected: false
   });
 
-  private featuresSubject = new BehaviorSubject<Feature[]>([]);
+  private featuresSubject = new BehaviorSubject<FeatureWithSecret[]>([]);
+  private secretsMap = new Map<string, string>(); // Separate secret storage
 
   public connection$ = this.connectionSubject.asObservable();
   public features$ = this.featuresSubject.asObservable();
@@ -84,7 +86,7 @@ export class YaftProviderService {
   }
 
   // Feature Management
-  loadFeatures(): Observable<Feature[]> {
+  loadFeatures(): Observable<FeatureWithSecret[]> {
     const connection = this.connectionSubject.value;
     if (!connection.isConnected) {
       return throwError(() => new Error('No active connection'));
@@ -102,7 +104,7 @@ export class YaftProviderService {
     }
   }
 
-  private loadFromApiService(): Observable<Feature[]> {
+  private loadFromApiService(): Observable<FeatureWithSecret[]> {
     const connection = this.connectionSubject.value;
     if (!connection.apiUrl) {
       return throwError(() => new Error('API URL not configured'));
@@ -114,9 +116,20 @@ export class YaftProviderService {
 
     return this.http.get<FeaturesResponse>(url).pipe(
       map((response) => {
-        const features = response.toggles || response.value || [];
-        this.featuresSubject.next(features);
-        return features;
+        const apiFeatures = response.toggles || response.value || [];
+        // Convert to FeatureWithSecret and generate secrets for admin UI
+        const featuresWithSecrets: FeatureWithSecret[] = apiFeatures.map(feature => {
+          const secret = this.secretsMap.get(feature.key) || this.generateMockSecret();
+          this.secretsMap.set(feature.key, secret);
+          
+          return {
+            ...feature,
+            secret: secret // Admin UI only - not from API
+          };
+        });
+        
+        this.featuresSubject.next(featuresWithSecrets);
+        return featuresWithSecrets;
       }),
       catchError((error) => {
         console.error('Failed to load features:', error);
@@ -125,7 +138,7 @@ export class YaftProviderService {
     );
   }
 
-  private loadFromLocalStorage(): Observable<Feature[]> {
+  private loadFromLocalStorage(): Observable<FeatureWithSecret[]> {
     // For local storage provider, we use browser localStorage
     // Note: Actual file reading requires user to import via file picker
     try {
@@ -147,8 +160,14 @@ export class YaftProviderService {
         }
       }
       
-      this.featuresSubject.next(features);
-      return of(features);
+      // Convert to FeatureWithSecret - local storage doesn't need real secrets
+      const featuresWithSecrets: FeatureWithSecret[] = features.map(feature => ({
+        ...feature,
+        secret: 'local-storage' // Placeholder for UI compatibility
+      }));
+      
+      this.featuresSubject.next(featuresWithSecrets);
+      return of(featuresWithSecrets);
     } catch (error) {
       console.error('Failed to load from local storage:', error);
       return throwError(() => error);
@@ -167,7 +186,6 @@ export class YaftProviderService {
             value: value === true || value === 'true' ? 'true' : 'false',
             activeAt: null,
             disabledAt: null,
-            tags: []
           });
         } else if (typeof value === 'object' && value !== null) {
           // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
@@ -177,7 +195,6 @@ export class YaftProviderService {
             value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
             activeAt: featureObj.activeAt || null,
             disabledAt: featureObj.disabledAt || null,
-            tags: Array.isArray(featureObj.tags) ? featureObj.tags : []
           });
         }
       } catch (error) {
@@ -189,7 +206,7 @@ export class YaftProviderService {
   }
 
   // CRUD Operations
-  createFeature(feature: Omit<Feature, 'secret'>): Observable<Feature> {
+  createFeature(feature: Omit<Feature, 'secret'>): Observable<FeatureWithSecret> {
     const connection = this.connectionSubject.value;
     if (!connection.isConnected) {
       return throwError(() => new Error('No active connection'));
@@ -207,7 +224,7 @@ export class YaftProviderService {
     }
   }
 
-  private createInApiService(feature: Omit<Feature, 'secret'>): Observable<Feature> {
+  private createInApiService(feature: Omit<Feature, 'secret'>): Observable<FeatureWithSecret> {
     const connection = this.connectionSubject.value;
     if (!connection.apiUrl) {
       return throwError(() => new Error('API URL not configured'));
@@ -222,13 +239,29 @@ export class YaftProviderService {
 
     return this.http.post<FeatureToggleResponse>(`${connection.apiUrl}/features`, payload).pipe(
       map((response) => {
-        const newFeature: Feature = {
+        let secret: string;
+        
+        if (response.secret) {
+          // Backend returned secret - this is a new collection creation
+          secret = response.secret;
+          this.secretsMap.set('collection-secret', secret); // Cache for future operations
+          console.log('New collection created with secret');
+        } else {
+          // Existing collection - use cached secret
+          secret = this.secretsMap.get('collection-secret') || '';
+          if (!secret) {
+            throw new Error('No collection secret available. Please set collection secret first.');
+          }
+        }
+        
+        this.secretsMap.set(response.key, secret);
+        
+        const newFeature: FeatureWithSecret = {
           key: response.key,
           value: response.value,
           activeAt: response.activeAt,
           disabledAt: response.disabledAt,
-          secret: response.secret,
-          tags: response.tags || []
+          secret: secret // From backend or cached collection secret
         };
         
         // Update local features list
@@ -244,13 +277,14 @@ export class YaftProviderService {
     );
   }
 
-  private createInLocalStorage(feature: Omit<Feature, 'secret'>): Observable<Feature> {
+  private createInLocalStorage(feature: Omit<Feature, 'secret'>): Observable<FeatureWithSecret> {
     try {
       const currentFeatures = this.featuresSubject.value;
-      const newFeature: Feature = {
+      
+      // Local storage doesn't need secrets - all operations are client-side
+      const newFeature: FeatureWithSecret = {
         ...feature,
-        secret: this.generateMockSecret(),
-        tags: feature.tags || []
+        secret: 'local-storage' // Placeholder for UI compatibility
       };
       
       const updatedFeatures = [...currentFeatures, newFeature];
@@ -263,7 +297,7 @@ export class YaftProviderService {
     }
   }
 
-  updateFeature(key: string, updates: Partial<Feature>, secret?: string): Observable<Feature> {
+  updateFeature(key: string, updates: Partial<Feature>, secret?: string): Observable<FeatureWithSecret> {
     const connection = this.connectionSubject.value;
     if (!connection.isConnected) {
       return throwError(() => new Error('No active connection'));
@@ -275,24 +309,30 @@ export class YaftProviderService {
         return this.updateInApiService(key, updates, secret);
       case ProviderType.LOCAL_STORAGE:
       case ProviderType.LOCAL_STORAGE_BOOLEAN:
-        return this.updateInLocalStorage(key, updates);
+        return this.updateInLocalStorage(key, updates, secret);
       default:
         return throwError(() => new Error('Unsupported provider type'));
     }
   }
 
-  private updateInApiService(key: string, updates: Partial<Feature>, secret?: string): Observable<Feature> {
+  private updateInApiService(key: string, updates: Partial<Feature>, secret?: string): Observable<FeatureWithSecret> {
     const connection = this.connectionSubject.value;
-    if (!connection.apiUrl || !secret) {
-      return throwError(() => new Error('API URL and secret are required'));
+    if (!connection.apiUrl) {
+      return throwError(() => new Error('API URL not configured'));
+    }
+    
+    // Use provided secret or cached collection secret
+    const collectionSecret = secret || this.secretsMap.get('collection-secret');
+    if (!collectionSecret) {
+      return throwError(() => new Error('No collection secret available. Please set collection secret first.'));
     }
 
     // Check if it's just a simple enable/disable operation
     if (Object.keys(updates).length === 1 && updates.value !== undefined) {
       if (updates.value === 'true') {
-        return this.activateFeature(key, secret);
+        return this.activateFeature(key, collectionSecret);
       } else if (updates.value === 'false') {
-        return this.deactivateFeature(key, secret);
+        return this.deactivateFeature(key, collectionSecret);
       }
     }
 
@@ -302,34 +342,32 @@ export class YaftProviderService {
       value: updates.value,
       activeAt: updates.activeAt ? new Date(updates.activeAt).toISOString() : null,
       disabledAt: updates.disabledAt ? new Date(updates.disabledAt).toISOString() : null,
-      tags: updates.tags
     };
 
     return this.http.put<FeatureToggleResponse>(`${connection.apiUrl}/features/${key}`, payload, {
-      headers: { 'Authorization': `Bearer ${secret}` }
+      headers: { 'Authorization': `Bearer ${collectionSecret}` }
     }).pipe(
       map((response) => ({
         key: response.key,
         value: response.value,
         activeAt: response.activeAt,
         disabledAt: response.disabledAt,
-        tags: response.tags || [],
-        secret: secret
+        secret: collectionSecret
       })),
       catchError((error) => {
         // Fallback to simple enable/disable if comprehensive update fails
         console.warn('Comprehensive update failed, falling back to simple toggle:', error);
         if (updates.value === 'true') {
-          return this.activateFeature(key, secret);
+          return this.activateFeature(key, collectionSecret);
         } else if (updates.value === 'false') {
-          return this.deactivateFeature(key, secret);
+          return this.deactivateFeature(key, collectionSecret);
         }
         return throwError(() => new Error('Feature update not supported by API'));
       })
     );
   }
 
-  private updateInLocalStorage(key: string, updates: Partial<Feature>): Observable<Feature> {
+  private updateInLocalStorage(key: string, updates: Partial<Feature>, secret?: string): Observable<FeatureWithSecret> {
     try {
       const currentFeatures = this.featuresSubject.value;
       const featureIndex = currentFeatures.findIndex(f => f.key === key);
@@ -338,7 +376,13 @@ export class YaftProviderService {
         return throwError(() => new Error('Feature not found'));
       }
 
-      const updatedFeature = { ...currentFeatures[featureIndex], ...updates };
+      const updatedFeature: FeatureWithSecret = { 
+        ...currentFeatures[featureIndex], 
+        ...updates,
+        // Local storage uses placeholder secret
+        secret: 'local-storage'
+      };
+      
       const updatedFeatures = [...currentFeatures];
       updatedFeatures[featureIndex] = updatedFeature;
 
@@ -371,11 +415,17 @@ export class YaftProviderService {
 
   private deleteFromApiService(key: string, secret?: string): Observable<void> {
     const connection = this.connectionSubject.value;
-    if (!connection.apiUrl || !secret) {
-      return throwError(() => new Error('API URL and secret are required'));
+    if (!connection.apiUrl) {
+      return throwError(() => new Error('API URL not configured'));
+    }
+    
+    // Use provided secret or cached collection secret
+    const collectionSecret = secret || this.secretsMap.get('collection-secret');
+    if (!collectionSecret) {
+      return throwError(() => new Error('No collection secret available. Please set collection secret first.'));
     }
 
-    return this.http.delete<void>(`${connection.apiUrl}/features/${key}/${secret}`).pipe(
+    return this.http.delete<void>(`${connection.apiUrl}/features/${key}/${collectionSecret}`).pipe(
       map(() => {
         // Remove from local features list
         const currentFeatures = this.featuresSubject.value;
@@ -402,7 +452,7 @@ export class YaftProviderService {
   }
 
   // Specific YaFT API operations
-  private activateFeature(key: string, secret: string): Observable<Feature> {
+  private activateFeature(key: string, secret: string): Observable<FeatureWithSecret> {
     const connection = this.connectionSubject.value;
     if (!connection.apiUrl) {
       return throwError(() => new Error('API URL not configured'));
@@ -416,13 +466,14 @@ export class YaftProviderService {
         key: response.key,
         value: response.value,
         activeAt: response.activeAt,
-        disabledAt: response.disabledAt
+        disabledAt: response.disabledAt,
+        secret: secret
       })),
       catchError((error) => throwError(() => error))
     );
   }
 
-  private deactivateFeature(key: string, secret: string): Observable<Feature> {
+  private deactivateFeature(key: string, secret: string): Observable<FeatureWithSecret> {
     const connection = this.connectionSubject.value;
     if (!connection.apiUrl) {
       return throwError(() => new Error('API URL not configured'));
@@ -436,7 +487,8 @@ export class YaftProviderService {
         key: response.key,
         value: response.value,
         activeAt: response.activeAt,
-        disabledAt: response.disabledAt
+        disabledAt: response.disabledAt,
+        secret: secret
       })),
       catchError((error) => throwError(() => error))
     );
@@ -483,5 +535,18 @@ export class YaftProviderService {
 
   getCurrentFeatures(): Feature[] {
     return this.featuresSubject.value;
+  }
+
+  // Collection secret management for existing collections
+  setCollectionSecret(secret: string): void {
+    this.secretsMap.set('collection-secret', secret);
+  }
+
+  hasCollectionSecret(): boolean {
+    return this.secretsMap.has('collection-secret') && !!this.secretsMap.get('collection-secret');
+  }
+
+  clearCollectionSecret(): void {
+    this.secretsMap.delete('collection-secret');
   }
 }

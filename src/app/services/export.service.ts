@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Feature } from '../models/feature.model';
+import { Feature, FeatureWithSecret } from '../models/feature.model';
 
 export interface ExportData {
   timestamp: string;
@@ -20,7 +20,7 @@ export interface ImportResult {
 export class ExportService {
   private readonly EXPORT_VERSION = '1.0';
 
-  exportToJson(features: Feature[]): void {
+  exportToJson(features: FeatureWithSecret[]): void {
     const exportData: ExportData = {
       timestamp: new Date().toISOString(),
       version: this.EXPORT_VERSION,
@@ -60,8 +60,8 @@ export class ExportService {
     window.URL.revokeObjectURL(url);
   }
 
-  exportToCsv(features: Feature[]): void {
-    const headers = ['Key', 'Value', 'ActiveAt', 'DisabledAt', 'Tags', 'HasSecret'];
+  exportToCsv(features: FeatureWithSecret[]): void {
+    const headers = ['Key', 'Value', 'ActiveAt', 'DisabledAt', 'HasSecret'];
     const csvContent = [
       headers.join(','),
       ...features.map(feature => [
@@ -69,7 +69,6 @@ export class ExportService {
         this.escapeCsvField(feature.value),
         this.escapeCsvField(feature.activeAt || ''),
         this.escapeCsvField(feature.disabledAt || ''),
-        this.escapeCsvField((feature.tags || []).join(';')),
         this.escapeCsvField(feature.secret ? 'true' : 'false')
       ].join(','))
     ].join('\n');
@@ -219,7 +218,6 @@ export class ExportService {
             value: values[1] || 'false',
             activeAt: values[2] || null,
             disabledAt: values[3] || null,
-            tags: values[4] ? values[4].split(';').filter(tag => tag.trim()) : []
           };
 
           if (feature.key) {
@@ -278,9 +276,6 @@ export class ExportService {
         value: feature.value === 'true' || feature.value === true ? 'true' : 'false',
         activeAt: this.validateAndCleanDate(feature.activeAt),
         disabledAt: this.validateAndCleanDate(feature.disabledAt),
-        tags: Array.isArray(feature.tags) 
-          ? feature.tags.filter(tag => typeof tag === 'string' && tag.trim()).map(tag => tag.trim())
-          : []
       };
 
       // Validate time range
@@ -344,7 +339,6 @@ export class ExportService {
             value: value === true || value === 'true' ? 'true' : 'false',
             activeAt: null,
             disabledAt: null,
-            tags: []
           });
         } else if (typeof value === 'object' && value !== null) {
           // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
@@ -354,7 +348,6 @@ export class ExportService {
             value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
             activeAt: featureObj.activeAt || null,
             disabledAt: featureObj.disabledAt || null,
-            tags: Array.isArray(featureObj.tags) ? featureObj.tags : []
           });
         }
       } catch (error) {

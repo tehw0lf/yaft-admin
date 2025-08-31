@@ -3,7 +3,7 @@ import { Observable, forkJoin, of } from 'rxjs';
 import { switchMap, map, catchError } from 'rxjs/operators';
 import { YaftProviderService } from './yaft-provider.service';
 import { ErrorHandlerService } from './error-handler.service';
-import { Feature } from '../models/feature.model';
+import { Feature, FeatureWithSecret } from '../models/feature.model';
 
 export interface BulkOperationResult {
   success: number;
@@ -29,7 +29,7 @@ export class BulkOperationsService {
   ) {}
 
   // Enable multiple features
-  enableFeatures(features: Feature[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
+  enableFeatures(features: FeatureWithSecret[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
     return this.executeBulkOperation(
       features,
       (feature) => this.enableSingleFeature(feature),
@@ -39,7 +39,7 @@ export class BulkOperationsService {
   }
 
   // Disable multiple features
-  disableFeatures(features: Feature[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
+  disableFeatures(features: FeatureWithSecret[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
     return this.executeBulkOperation(
       features,
       (feature) => this.disableSingleFeature(feature),
@@ -49,7 +49,7 @@ export class BulkOperationsService {
   }
 
   // Delete multiple features
-  deleteFeatures(features: Feature[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
+  deleteFeatures(features: FeatureWithSecret[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
     return this.executeBulkOperation(
       features,
       (feature) => this.deleteSingleFeature(feature),
@@ -58,28 +58,9 @@ export class BulkOperationsService {
     );
   }
 
-  // Add tags to multiple features
-  addTagsToFeatures(features: Feature[], tags: string[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
-    return this.executeBulkOperation(
-      features,
-      (feature) => this.addTagsToSingleFeature(feature, tags),
-      'Adding tags to',
-      progressCallback
-    );
-  }
-
-  // Remove tags from multiple features
-  removeTagsFromFeatures(features: Feature[], tags: string[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
-    return this.executeBulkOperation(
-      features,
-      (feature) => this.removeTagsFromSingleFeature(feature, tags),
-      'Removing tags from',
-      progressCallback
-    );
-  }
 
   // Export selected features
-  exportFeatures(features: Feature[]): void {
+  exportFeatures(features: FeatureWithSecret[]): void {
     // This would typically use the ExportService
     const exportData = {
       timestamp: new Date().toISOString(),
@@ -106,7 +87,7 @@ export class BulkOperationsService {
   }
 
   private executeBulkOperation<T>(
-    features: Feature[],
+    features: FeatureWithSecret[],
     operation: (feature: Feature) => Observable<T>,
     actionName: string,
     progressCallback?: (progress: BulkOperationProgress) => void
@@ -182,7 +163,7 @@ export class BulkOperationsService {
     });
   }
 
-  private enableSingleFeature(feature: Feature): Observable<any> {
+  private enableSingleFeature(feature: FeatureWithSecret): Observable<any> {
     if (!feature.secret) {
       return new Observable(observer => {
         observer.error(new Error('No secret available for feature'));
@@ -192,7 +173,7 @@ export class BulkOperationsService {
     return this.yaftService.updateFeature(feature.key, { value: 'true' }, feature.secret);
   }
 
-  private disableSingleFeature(feature: Feature): Observable<any> {
+  private disableSingleFeature(feature: FeatureWithSecret): Observable<any> {
     if (!feature.secret) {
       return new Observable(observer => {
         observer.error(new Error('No secret available for feature'));
@@ -202,7 +183,7 @@ export class BulkOperationsService {
     return this.yaftService.updateFeature(feature.key, { value: 'false' }, feature.secret);
   }
 
-  private deleteSingleFeature(feature: Feature): Observable<any> {
+  private deleteSingleFeature(feature: FeatureWithSecret): Observable<any> {
     if (!feature.secret) {
       return new Observable(observer => {
         observer.error(new Error('No secret available for feature'));
@@ -212,44 +193,19 @@ export class BulkOperationsService {
     return this.yaftService.deleteFeature(feature.key, feature.secret);
   }
 
-  private addTagsToSingleFeature(feature: Feature, tagsToAdd: string[]): Observable<any> {
-    const currentTags = feature.tags || [];
-    const newTags = [...new Set([...currentTags, ...tagsToAdd])];
-    
-    if (!feature.secret) {
-      return new Observable(observer => {
-        observer.error(new Error('No secret available for feature'));
-      });
-    }
-
-    return this.yaftService.updateFeature(feature.key, { tags: newTags }, feature.secret);
-  }
-
-  private removeTagsFromSingleFeature(feature: Feature, tagsToRemove: string[]): Observable<any> {
-    const currentTags = feature.tags || [];
-    const newTags = currentTags.filter(tag => !tagsToRemove.includes(tag));
-    
-    if (!feature.secret) {
-      return new Observable(observer => {
-        observer.error(new Error('No secret available for feature'));
-      });
-    }
-
-    return this.yaftService.updateFeature(feature.key, { tags: newTags }, feature.secret);
-  }
 
   // Utility method to check if bulk operations are available
-  canPerformBulkOperations(features: Feature[]): boolean {
+  canPerformBulkOperations(features: FeatureWithSecret[]): boolean {
     return features.some(feature => !!feature.secret);
   }
 
   // Get features that can be bulk operated (have secrets)
-  getOperableFeatures(features: Feature[]): Feature[] {
+  getOperableFeatures(features: FeatureWithSecret[]): FeatureWithSecret[] {
     return features.filter(feature => !!feature.secret);
   }
 
   // Get features that cannot be bulk operated (no secrets)
-  getNonOperableFeatures(features: Feature[]): Feature[] {
+  getNonOperableFeatures(features: FeatureWithSecret[]): FeatureWithSecret[] {
     return features.filter(feature => !feature.secret);
   }
 }

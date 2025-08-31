@@ -23,7 +23,6 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatChipInputEvent } from '@angular/material/chips';
 import { HttpClientModule } from '@angular/common/http';
 
 import { YaftProviderService } from './services/yaft-provider.service';
@@ -33,9 +32,11 @@ import { ErrorHandlerService } from './services/error-handler.service';
 import { BulkOperationsService } from './services/bulk-operations.service';
 import { WebSocketService } from './services/websocket.service';
 import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
+import { DragDropDirective } from './directives/drag-drop.directive';
 import { timeRangeValidator } from './validators/time-range.validator';
 import {
   Feature,
+  FeatureWithSecret,
   ProviderType,
   ProviderConnection,
   FeatureStatus
@@ -64,7 +65,8 @@ import {
     MatTooltipModule,
     MatDialogModule,
     MatCheckboxModule,
-    FeatureFiltersComponent
+    FeatureFiltersComponent,
+    DragDropDirective
   ],
   selector: 'app-root',
   templateUrl: './app.html',
@@ -84,9 +86,9 @@ export class App implements OnInit, OnDestroy {
     isConnected: false
   };
   
-  features: Feature[] = [];
-  filteredFeatures: Feature[] = [];
-  displayedColumns: string[] = ['select', 'key', 'status', 'value', 'activeAt', 'disabledAt', 'tags', 'actions'];
+  features: FeatureWithSecret[] = [];
+  filteredFeatures: FeatureWithSecret[] = [];
+  displayedColumns: string[] = ['select', 'key', 'status', 'value', 'activeAt', 'disabledAt', 'actions'];
 
   get currentDisplayedColumns(): string[] {
     if (this.isBooleanProvider) {
@@ -100,14 +102,17 @@ export class App implements OnInit, OnDestroy {
   isLoading = false;
   isCreating = false;
   isEditing = false;
-  editingFeature: Feature | null = null;
+  editingFeature: FeatureWithSecret | null = null;
   alertMessage = '';
   alertType: 'success' | 'error' = 'success';
   
   // Bulk operations
-  selectedFeatures = new Set<Feature>();
+  selectedFeatures = new Set<FeatureWithSecret>();
   isAllSelected = false;
   isBulkOperating = false;
+  
+  // Drag and drop state
+  isDragOverActive = false;
   
   // Chip input configuration
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
@@ -187,7 +192,8 @@ export class App implements OnInit, OnDestroy {
       providerType: [ProviderType.API_SERVICE, Validators.required],
       apiUrl: ['http://localhost:8080', Validators.required],
       baseUUID: [''],
-      configPath: ['']
+      configPath: [''],
+      collectionSecret: [''] // Optional secret for existing collections
     });
   }
 
@@ -196,8 +202,7 @@ export class App implements OnInit, OnDestroy {
       key: ['', Validators.required],
       value: ['false', Validators.required],
       activeAt: [''],
-      disabledAt: [''],
-      tags: [[]]
+      disabledAt: ['']
     }, { 
       validators: [timeRangeValidator()] 
     });
@@ -207,20 +212,17 @@ export class App implements OnInit, OnDestroy {
     // Clear existing validators for optional fields
     this.featureForm.get('activeAt')?.clearValidators();
     this.featureForm.get('disabledAt')?.clearValidators();
-    this.featureForm.get('tags')?.clearValidators();
 
     if (this.isBooleanProvider) {
       // For boolean providers, disable advanced fields
       this.featureForm.get('activeAt')?.disable();
       this.featureForm.get('disabledAt')?.disable();
-      this.featureForm.get('tags')?.disable();
       // Remove time range validator for boolean providers
       this.featureForm.clearValidators();
     } else {
       // For feature object providers, enable all fields
       this.featureForm.get('activeAt')?.enable();
       this.featureForm.get('disabledAt')?.enable();
-      this.featureForm.get('tags')?.enable();
       // Add time range validator for feature object providers
       this.featureForm.setValidators([timeRangeValidator()]);
     }
@@ -282,6 +284,11 @@ export class App implements OnInit, OnDestroy {
       isConnected: false
     };
 
+    // Set collection secret if provided for API providers
+    if (isApiProvider && formValue.collectionSecret && formValue.collectionSecret.trim()) {
+      this.yaftService.setCollectionSecret(formValue.collectionSecret.trim());
+    }
+
     this.yaftService.connect(connection)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -321,15 +328,13 @@ export class App implements OnInit, OnDestroy {
       key: formValue.key,
       value: formValue.value,
       activeAt: null,
-      disabledAt: null,
-      tags: []
+      disabledAt: null
     };
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
       feature.activeAt = formValue.activeAt || null;
       feature.disabledAt = formValue.disabledAt || null;
-      feature.tags = formValue.tags || [];
     }
 
     this.yaftService.createFeature(feature)
@@ -379,7 +384,6 @@ export class App implements OnInit, OnDestroy {
     if (this.isFeatureObjectProvider) {
       updates.activeAt = formValue.activeAt || null;
       updates.disabledAt = formValue.disabledAt || null;
-      updates.tags = formValue.tags || [];
     }
 
     this.yaftService.updateFeature(this.editingFeature.key, updates, this.editingFeature.secret)
@@ -422,7 +426,7 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  onToggleFeature(feature: Feature, enabled: boolean) {
+  onToggleFeature(feature: FeatureWithSecret, enabled: boolean) {
     if (!feature.secret) {
       this.showAlert('Cannot toggle feature without secret', 'error');
       return;
@@ -448,7 +452,7 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  onEditFeature(feature: Feature) {
+  onEditFeature(feature: FeatureWithSecret) {
     this.isEditing = true;
     this.editingFeature = feature;
     
@@ -457,8 +461,7 @@ export class App implements OnInit, OnDestroy {
       key: feature.key,
       value: feature.value,
       activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString().slice(0, 16) : '',
-      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : '',
-      tags: feature.tags || []
+      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : ''
     });
     
     // Disable the key field since we can't change it during edit
@@ -475,7 +478,7 @@ export class App implements OnInit, OnDestroy {
     this.showAlert('Edit cancelled', 'success');
   }
 
-  onDeleteFeature(feature: Feature) {
+  onDeleteFeature(feature: FeatureWithSecret) {
     if (!feature.secret) {
       this.showAlert('Cannot delete feature without secret', 'error');
       return;
@@ -500,37 +503,13 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-  onCopySecret(feature: Feature) {
+  onCopySecret(feature: FeatureWithSecret) {
     if (feature.secret) {
       this.copyToClipboard(feature.secret);
       this.showAlert('Secret copied to clipboard', 'success');
     }
   }
 
-  // Tag management methods
-  addTag(event: MatChipInputEvent): void {
-    const value = (event.value || '').trim();
-    
-    if (value) {
-      const currentTags = this.featureForm.get('tags')?.value || [];
-      if (!currentTags.includes(value)) {
-        currentTags.push(value);
-        this.featureForm.patchValue({ tags: currentTags });
-      }
-    }
-    
-    event.chipInput!.clear();
-  }
-
-  removeTag(tag: string): void {
-    const currentTags = this.featureForm.get('tags')?.value || [];
-    const index = currentTags.indexOf(tag);
-
-    if (index >= 0) {
-      currentTags.splice(index, 1);
-      this.featureForm.patchValue({ tags: currentTags });
-    }
-  }
 
   // Export/Import methods
   onExportJson(): void {
@@ -575,33 +554,47 @@ export class App implements OnInit, OnDestroy {
     const file = input.files?.[0];
     
     if (file) {
-      this.errorHandler.showInfoNotification('Importing features...');
-      
-      this.exportService.importFromFile(file).then(result => {
-        if (result.success) {
-          this.errorHandler.showSuccessNotification(
-            `Successfully imported ${result.features.length} features`
-          );
-          
-          if (result.warnings.length > 0) {
-            console.warn('Import warnings:', result.warnings);
-            result.warnings.forEach(warning => 
-              this.errorHandler.showWarningNotification(warning, 2000)
-            );
-          }
-          
-          // TODO: Show import preview dialog and allow user to confirm
-          this.showImportPreview(result.features);
-        } else {
-          this.errorHandler.showErrorNotification(
-            `Import failed: ${result.errors.join(', ')}`
+      this.processImportFile(file);
+      // Clear the input
+      input.value = '';
+    }
+  }
+
+  onFilesDropped(files: FileList): void {
+    if (files.length > 0) {
+      // Process the first file
+      this.processImportFile(files[0]);
+    }
+  }
+
+  onDragOver(isDragOver: boolean): void {
+    this.isDragOverActive = isDragOver;
+  }
+
+  private processImportFile(file: File): void {
+    this.errorHandler.showInfoNotification('Importing features...');
+    
+    this.exportService.importFromFile(file).then(result => {
+      if (result.success) {
+        this.errorHandler.showSuccessNotification(
+          `Successfully imported ${result.features.length} features`
+        );
+        
+        if (result.warnings.length > 0) {
+          console.warn('Import warnings:', result.warnings);
+          result.warnings.forEach(warning => 
+            this.errorHandler.showWarningNotification(warning, 2000)
           );
         }
         
-        // Clear the input
-        input.value = '';
-      });
-    }
+        // TODO: Show import preview dialog and allow user to confirm
+        this.showImportPreview(result.features);
+      } else {
+        this.errorHandler.showErrorNotification(
+          `Import failed: ${result.errors.join(', ')}`
+        );
+      }
+    });
   }
 
   private showImportPreview(features: Feature[]): void {
@@ -660,7 +653,7 @@ export class App implements OnInit, OnDestroy {
     return this.yaftService.getFeatureStatus(feature);
   }
 
-  hasSecret(feature: Feature): boolean {
+  hasSecret(feature: FeatureWithSecret): boolean {
     return !!feature.secret;
   }
 
@@ -672,9 +665,6 @@ export class App implements OnInit, OnDestroy {
     return null;
   }
 
-  getTags(feature: Feature): string[] {
-    return feature.tags || [];
-  }
 
   // Bulk Operations Methods
   toggleAllSelection(): void {
@@ -738,41 +728,6 @@ export class App implements OnInit, OnDestroy {
     this.bulkOperationsService.exportFeatures(selectedArray);
   }
 
-  onBulkAddTags(): void {
-    const tagsInput = prompt('Enter tags to add (comma-separated):');
-    if (tagsInput) {
-      const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
-      if (tags.length > 0) {
-        this.performBulkTagOperation('add', tags);
-      }
-    }
-  }
-
-  onBulkRemoveTags(): void {
-    // Get all unique tags from selected features
-    const allTags = new Set<string>();
-    this.selectedFeatures.forEach(feature => {
-      if (feature.tags) {
-        feature.tags.forEach(tag => allTags.add(tag));
-      }
-    });
-
-    if (allTags.size === 0) {
-      this.errorHandler.showWarningNotification('Selected features have no tags to remove');
-      return;
-    }
-
-    const tagsArray = Array.from(allTags).sort();
-    const message = `Available tags: ${tagsArray.join(', ')}\n\nEnter tags to remove (comma-separated):`;
-    const tagsInput = prompt(message);
-    
-    if (tagsInput) {
-      const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
-      if (tags.length > 0) {
-        this.performBulkTagOperation('remove', tags);
-      }
-    }
-  }
 
   private performBulkOperation(operation: 'enable' | 'disable' | 'delete', loadingMessage: string): void {
     this.isBulkOperating = true;
@@ -824,50 +779,9 @@ export class App implements OnInit, OnDestroy {
       });
   }
 
-  private performBulkTagOperation(operation: 'add' | 'remove', tags: string[]): void {
-    this.isBulkOperating = true;
-    const actionName = operation === 'add' ? 'Adding' : 'Removing';
-    this.errorHandler.showInfoNotification(`${actionName} tags...`);
-
-    const selectedArray = Array.from(this.selectedFeatures);
-    const operationObservable = operation === 'add' 
-      ? this.bulkOperationsService.addTagsToFeatures(selectedArray, tags)
-      : this.bulkOperationsService.removeTagsFromFeatures(selectedArray, tags);
-
-    operationObservable
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (result) => {
-          this.isBulkOperating = false;
-          
-          if (result.success > 0) {
-            const verb = operation === 'add' ? 'added to' : 'removed from';
-            this.errorHandler.showSuccessNotification(
-              `Successfully ${verb} ${result.success} features`
-            );
-          }
-          
-          if (result.failed > 0) {
-            const verb = operation === 'add' ? 'add to' : 'remove from';
-            this.errorHandler.showWarningNotification(
-              `Failed to ${verb} ${result.failed} features`
-            );
-          }
-
-          // Clear selection and refresh
-          this.selectedFeatures.clear();
-          this.updateSelectionState();
-          this.onRefresh();
-        },
-        error: (error) => {
-          this.isBulkOperating = false;
-          this.errorHandler.showErrorNotification(`Bulk tag operation failed: ${error.message}`);
-        }
-      });
-  }
 
   // Helper method to check if a feature can be selected for bulk operations
-  canSelectFeature(feature: Feature): boolean {
+  canSelectFeature(feature: FeatureWithSecret): boolean {
     return !!feature.secret;
   }
 
