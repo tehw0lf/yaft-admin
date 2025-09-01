@@ -259,33 +259,21 @@
 
                 <!-- Activate At DateTime -->
                 <div class="datetime-row">
-                  <mat-form-field appearance="outline" class="date-field">
-                    <mat-label>Activate Date</mat-label>
-                    <input matInput [matDatepicker]="activateDatePicker" formControlName="activeAtDate" placeholder="Select date">
-                    <mat-datepicker-toggle matIconSuffix [for]="activateDatePicker"></mat-datepicker-toggle>
-                    <mat-datepicker #activateDatePicker></mat-datepicker>
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline" class="time-field">
-                    <mat-label>Activate Time</mat-label>
-                    <input matInput formControlName="activeAtTime" type="time" placeholder="HH:MM">
-                    <mat-icon matSuffix>schedule</mat-icon>
+                  <mat-form-field appearance="outline" class="datetime-field">
+                    <mat-label>Activate Date & Time</mat-label>
+                    <input matInput formControlName="activeAt" type="datetime-local" placeholder="Select date and time">
+                    <mat-icon matSuffix>event</mat-icon>
+                    <mat-hint>Optional: When should this feature become active?</mat-hint>
                   </mat-form-field>
                 </div>
 
                 <!-- Disable At DateTime -->
                 <div class="datetime-row">
-                  <mat-form-field appearance="outline" class="date-field">
-                    <mat-label>Disable Date</mat-label>
-                    <input matInput [matDatepicker]="disableDatePicker" formControlName="disabledAtDate" placeholder="Select date">
-                    <mat-datepicker-toggle matIconSuffix [for]="disableDatePicker"></mat-datepicker-toggle>
-                    <mat-datepicker #disableDatePicker></mat-datepicker>
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline" class="time-field">
-                    <mat-label>Disable Time</mat-label>
-                    <input matInput formControlName="disabledAtTime" type="time" placeholder="HH:MM">
-                    <mat-icon matSuffix>schedule</mat-icon>
+                  <mat-form-field appearance="outline" class="datetime-field">
+                    <mat-label>Disable Date & Time</mat-label>
+                    <input matInput formControlName="disabledAt" type="datetime-local" placeholder="Select date and time">
+                    <mat-icon matSuffix>event_busy</mat-icon>
+                    <mat-hint>Optional: When should this feature be disabled?</mat-hint>
                   </mat-form-field>
                 </div>
 

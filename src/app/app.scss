@@ -26,23 +26,38 @@
   margin-bottom: 16px;
   align-items: flex-start;
   
-  .date-field {
-    flex: 2;
-    min-width: 200px;
-  }
-  
-  .time-field {
+  .datetime-field {
     flex: 1;
-    min-width: 120px;
+    min-width: 280px;
+    
+    input[type="datetime-local"] {
+      cursor: pointer;
+      
+      &::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        filter: invert(0.5);
+        
+        &:hover {
+          filter: invert(0.8);
+        }
+      }
+      
+      // Style for dark theme
+      &::-webkit-datetime-edit {
+        padding: 0;
+      }
+      
+      &::-webkit-datetime-edit-fields-wrapper {
+        background: transparent;
+      }
+    }
   }
   
   @media (max-width: 600px) {
     flex-direction: column;
     gap: 12px;
     
-    .date-field,
-    .time-field {
-      flex: 1;
+    .datetime-field {
       min-width: unset;
     }
   }

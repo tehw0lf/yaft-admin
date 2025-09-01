@@ -187,12 +187,7 @@ export class App implements OnInit, OnDestroy {
       value: ['false', Validators.required],
       tags: [[]],
       activeAt: [''],
-      disabledAt: [''],
-      // Separate date and time fields for better UX
-      activeAtDate: [''],
-      activeAtTime: [''],
-      disabledAtDate: [''],
-      disabledAtTime: ['']
+      disabledAt: ['']
     }, { 
       validators: [timeRangeValidator()] 
     });
@@ -233,31 +228,6 @@ export class App implements OnInit, OnDestroy {
     this.featureForm.updateValueAndValidity();
   }
 
-  private combineDateAndTime(dateValue: any, timeValue: any): string | null {
-    if (!dateValue) return null;
-    
-    const date = new Date(dateValue);
-    
-    if (timeValue) {
-      const [hours, minutes] = timeValue.split(':');
-      date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-    } else {
-      // Default to start of day if no time specified
-      date.setHours(0, 0, 0, 0);
-    }
-    
-    return date.toISOString();
-  }
-
-  private splitDateTimeForForm(isoString: string | null): { date: string, time: string } {
-    if (!isoString) return { date: '', time: '' };
-    
-    const date = new Date(isoString);
-    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
-    const timeStr = date.toTimeString().slice(0, 5); // HH:MM
-    
-    return { date: dateStr, time: timeStr };
-  }
 
   get isApiProvider(): boolean {
     const providerType = this.connectionForm.get('providerType')?.value;
@@ -362,8 +332,8 @@ export class App implements OnInit, OnDestroy {
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
-      feature.activeAt = this.combineDateAndTime(formValue.activeAtDate, formValue.activeAtTime);
-      feature.disabledAt = this.combineDateAndTime(formValue.disabledAtDate, formValue.disabledAtTime);
+      feature.activeAt = formValue.activeAt ? new Date(formValue.activeAt).toISOString() : null;
+      feature.disabledAt = formValue.disabledAt ? new Date(formValue.disabledAt).toISOString() : null;
     }
 
     this.yaftService.createFeature(feature)
@@ -409,8 +379,8 @@ export class App implements OnInit, OnDestroy {
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
-      updates.activeAt = this.combineDateAndTime(formValue.activeAtDate, formValue.activeAtTime);
-      updates.disabledAt = this.combineDateAndTime(formValue.disabledAtDate, formValue.disabledAtTime);
+      updates.activeAt = formValue.activeAt ? new Date(formValue.activeAt).toISOString() : null;
+      updates.disabledAt = formValue.disabledAt ? new Date(formValue.disabledAt).toISOString() : null;
     }
 
     this.yaftService.updateFeature(this.editingFeature.key, updates, this.editingFeature.secret)
@@ -477,21 +447,13 @@ export class App implements OnInit, OnDestroy {
     this.isEditing = true;
     this.editingFeature = feature;
     
-    // Populate the form with the feature data
-    const activeAtSplit = this.splitDateTimeForForm(feature.activeAt);
-    const disabledAtSplit = this.splitDateTimeForForm(feature.disabledAt);
-    
+    // Convert ISO strings to datetime-local format (YYYY-MM-DDTHH:mm)
     this.featureForm.patchValue({
       key: feature.key,
       value: feature.value,
       tags: feature.tags || [],
       activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString().slice(0, 16) : '',
-      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : '',
-      // Populate the new date/time fields
-      activeAtDate: activeAtSplit.date,
-      activeAtTime: activeAtSplit.time,
-      disabledAtDate: disabledAtSplit.date,
-      disabledAtTime: disabledAtSplit.time
+      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : ''
     });
     
     // Disable the key field since we can't change it during edit
@@ -508,11 +470,7 @@ export class App implements OnInit, OnDestroy {
       tags: [],
       key: '',
       activeAt: '',
-      disabledAt: '',
-      activeAtDate: '',
-      activeAtTime: '',
-      disabledAtDate: '',
-      disabledAtTime: ''
+      disabledAt: ''
     });
     this.featureForm.get('key')?.enable();
     this.showAlert('Edit cancelled', 'success');
