@@ -2,15 +2,34 @@ import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 
 export function timeRangeValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
-    const activeAt = control.get('activeAt')?.value;
-    const disabledAt = control.get('disabledAt')?.value;
+    // Get separate date and time values
+    const activeAtDate = control.get('activeAtDate')?.value;
+    const activeAtTime = control.get('activeAtTime')?.value;
+    const disabledAtDate = control.get('disabledAtDate')?.value;
+    const disabledAtTime = control.get('disabledAtTime')?.value;
 
-    if (!activeAt || !disabledAt) {
-      return null; // If either is empty, no validation needed
+    // Only validate if both active and disabled dates are provided
+    if (!activeAtDate || !disabledAtDate) {
+      return null; // If either date is empty, no validation needed
     }
 
-    const activeDate = new Date(activeAt);
-    const disabledDate = new Date(disabledAt);
+    // Combine date and time
+    const activeDate = new Date(activeAtDate);
+    const disabledDate = new Date(disabledAtDate);
+    
+    if (activeAtTime) {
+      const [activeHours, activeMinutes] = activeAtTime.split(':');
+      activeDate.setHours(parseInt(activeHours, 10), parseInt(activeMinutes, 10), 0, 0);
+    } else {
+      activeDate.setHours(0, 0, 0, 0);
+    }
+    
+    if (disabledAtTime) {
+      const [disabledHours, disabledMinutes] = disabledAtTime.split(':');
+      disabledDate.setHours(parseInt(disabledHours, 10), parseInt(disabledMinutes, 10), 0, 0);
+    } else {
+      disabledDate.setHours(0, 0, 0, 0);
+    }
 
     if (activeDate >= disabledDate) {
       return { timeRangeInvalid: { 
