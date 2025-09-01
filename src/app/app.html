@@ -262,7 +262,6 @@
                   <mat-form-field appearance="outline" class="datetime-field">
                     <mat-label>Activate Date & Time</mat-label>
                     <input matInput formControlName="activeAt" type="datetime-local" placeholder="Select date and time">
-                    <mat-icon matSuffix>event</mat-icon>
                     <mat-hint>Optional: When should this feature become active?</mat-hint>
                   </mat-form-field>
                 </div>
@@ -272,14 +271,13 @@
                   <mat-form-field appearance="outline" class="datetime-field">
                     <mat-label>Disable Date & Time</mat-label>
                     <input matInput formControlName="disabledAt" type="datetime-local" placeholder="Select date and time">
-                    <mat-icon matSuffix>event_busy</mat-icon>
                     <mat-hint>Optional: When should this feature be disabled?</mat-hint>
                   </mat-form-field>
                 </div>
 
                 <div class="datetime-info">
                   <mat-icon>info</mat-icon>
-                  <span>Leave empty for immediate activation or manual control. Times are in your local timezone.</span>
+                  <span>Leave empty for immediate activation or manual control. Times are in your local timezone. Click the calendar icon to open the date/time picker.</span>
                 </div>
               </div>
 
