@@ -2,6 +2,71 @@
   margin: 16px 0;
 }
 
+// DateTime picker styles
+.datetime-section {
+  margin: 20px 0 16px 0;
+  
+  h4 {
+    color: #7b1fa2;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    font-size: 16px;
+  }
+  
+  .datetime-hint {
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.datetime-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+  
+  .date-field {
+    flex: 2;
+    min-width: 200px;
+  }
+  
+  .time-field {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 12px;
+    
+    .date-field,
+    .time-field {
+      flex: 1;
+      min-width: unset;
+    }
+  }
+}
+
+.datetime-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(33, 150, 243, 0.1);
+  padding: 12px;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 14px;
+  margin-top: 16px;
+  
+  mat-icon {
+    color: rgba(33, 150, 243, 0.7);
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -608,5 +673,89 @@
   .mat-mdc-select-value {
     line-height: 1.4;
     max-width: 100%;
+  }
+}
+
+// Tag-specific styles
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  
+  .tag-chip {
+    background-color: #7b1fa2;
+    color: white;
+    font-size: 12px;
+    height: 24px;
+    line-height: 24px;
+    border-radius: 12px;
+    padding: 0 8px;
+    
+    &:hover {
+      background-color: #6a1b9a;
+    }
+  }
+}
+
+.no-tags {
+  color: #999;
+  font-style: italic;
+  font-size: 14px;
+}
+
+// Tag input form field styles
+mat-chip-grid {
+  .mat-mdc-chip {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #4caf50;
+    
+    .mat-mdc-chip-remove {
+      color: #d32f2f;
+      
+      &:hover {
+        color: #c62828;
+        background-color: rgba(211, 47, 47, 0.1);
+      }
+    }
+  }
+  
+  input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    width: 120px;
+    min-width: 120px;
+    padding: 8px 0;
+    
+    &::placeholder {
+      color: #666;
+      opacity: 0.7;
+    }
+  }
+}
+
+// Table column width adjustments
+.features-table {
+  .mat-column-tags {
+    width: 200px;
+    max-width: 200px;
+  }
+  
+  .mat-column-key {
+    width: 150px;
+    max-width: 150px;
+  }
+  
+  .mat-column-status {
+    width: 100px;
+    max-width: 100px;
+  }
+  
+  .mat-column-value {
+    width: 100px;
+    max-width: 100px;
   }
 }

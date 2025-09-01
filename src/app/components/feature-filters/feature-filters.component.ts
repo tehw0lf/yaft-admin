@@ -77,6 +77,19 @@ import { FeatureFilter } from '../../models/feature.model';
             </mat-form-field>
           </div>
 
+          <!-- Tags Filter Row -->
+          <div class="filter-row tags-filter-row">
+            <mat-form-field appearance="outline" class="tags-filter-field">
+              <mat-label>Filter by Tags</mat-label>
+              <mat-select formControlName="tags" multiple>
+                <mat-option *ngFor="let tag of availableTags" [value]="tag">
+                  {{tag}}
+                </mat-option>
+              </mat-select>
+              <mat-hint>Select tags to filter features</mat-hint>
+            </mat-form-field>
+          </div>
+
           <div class="filter-row">
             <!-- Date Range -->
             <div class="date-range-container">
@@ -159,6 +172,7 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   
   filterForm: FormGroup;
+  availableTags: string[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -187,9 +201,17 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
         this.filterForm.patchValue({
           searchText: filter.searchText,
           status: filter.status,
+          tags: filter.tags,
           dateStart: filter.dateRange.start,
           dateEnd: filter.dateRange.end
         }, { emitEvent: false });
+      });
+
+    // Subscribe to features to extract available tags
+    this.yaftService.features$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(features => {
+        this.updateAvailableTags(features);
       });
   }
 
@@ -202,6 +224,7 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     return this.fb.group({
       searchText: [''],
       status: [[]],
+      tags: [[]],
       dateStart: [null],
       dateEnd: [null]
     });
@@ -211,6 +234,7 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     const filter: FeatureFilter = {
       searchText: formValue.searchText || '',
       status: formValue.status || [],
+      tags: formValue.tags || [],
       dateRange: {
         start: formValue.dateStart,
         end: formValue.dateEnd
@@ -233,8 +257,21 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     return !!(
       filter.searchText ||
       filter.status.length > 0 ||
+      filter.tags.length > 0 ||
       filter.dateRange.start ||
       filter.dateRange.end
     );
+  }
+
+  private updateAvailableTags(features: any[]): void {
+    const tagSet = new Set<string>();
+    
+    features.forEach(feature => {
+      if (feature.tags && Array.isArray(feature.tags)) {
+        feature.tags.forEach((tag: string) => tagSet.add(tag));
+      }
+    });
+    
+    this.availableTags = Array.from(tagSet).sort();
   }
 }

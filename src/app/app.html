@@ -227,19 +227,72 @@
                 </mat-form-field>
               </div>
 
-              <!-- Advanced fields only for feature object providers -->
+              <!-- Tags field (only for feature object providers) -->
               <div *ngIf="isFeatureObjectProvider" class="form-row">
-                <mat-form-field appearance="outline">
-                  <mat-label>Activate At (Optional)</mat-label>
-                  <input matInput formControlName="activeAt" type="datetime-local">
-                  <mat-hint>When the feature should become active</mat-hint>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Tags</mat-label>
+                  <mat-chip-grid #tagChipGrid>
+                    <mat-chip-row
+                      *ngFor="let tag of getTags()"
+                      (removed)="removeTag(tag)"
+                      removable="true">
+                      {{tag}}
+                      <mat-icon matChipRemove>cancel</mat-icon>
+                    </mat-chip-row>
+                    <input 
+                      placeholder="Add tags..."
+                      [matChipInputFor]="tagChipGrid"
+                      [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                      [matChipInputAddOnBlur]="true"
+                      (matChipInputTokenEnd)="addTag($event)">
+                  </mat-chip-grid>
+                  <mat-hint>Press Enter or comma to add tags. Use lowercase, alphanumeric, and hyphens only.</mat-hint>
                 </mat-form-field>
+              </div>
 
-                <mat-form-field appearance="outline">
-                  <mat-label>Disable At (Optional)</mat-label>
-                  <input matInput formControlName="disabledAt" type="datetime-local">
-                  <mat-hint>When the feature should be disabled</mat-hint>
-                </mat-form-field>
+              <!-- Advanced fields only for feature object providers -->
+              <div *ngIf="isFeatureObjectProvider">
+                <div class="datetime-section">
+                  <h4>Schedule Feature Toggle</h4>
+                  <p class="datetime-hint">Set specific dates and times for automatic feature activation/deactivation</p>
+                </div>
+
+                <!-- Activate At DateTime -->
+                <div class="datetime-row">
+                  <mat-form-field appearance="outline" class="date-field">
+                    <mat-label>Activate Date</mat-label>
+                    <input matInput [matDatepicker]="activateDatePicker" formControlName="activeAtDate" placeholder="Select date">
+                    <mat-datepicker-toggle matIconSuffix [for]="activateDatePicker"></mat-datepicker-toggle>
+                    <mat-datepicker #activateDatePicker></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="time-field">
+                    <mat-label>Activate Time</mat-label>
+                    <input matInput formControlName="activeAtTime" type="time" placeholder="HH:MM">
+                    <mat-icon matSuffix>schedule</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <!-- Disable At DateTime -->
+                <div class="datetime-row">
+                  <mat-form-field appearance="outline" class="date-field">
+                    <mat-label>Disable Date</mat-label>
+                    <input matInput [matDatepicker]="disableDatePicker" formControlName="disabledAtDate" placeholder="Select date">
+                    <mat-datepicker-toggle matIconSuffix [for]="disableDatePicker"></mat-datepicker-toggle>
+                    <mat-datepicker #disableDatePicker></mat-datepicker>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="time-field">
+                    <mat-label>Disable Time</mat-label>
+                    <input matInput formControlName="disabledAtTime" type="time" placeholder="HH:MM">
+                    <mat-icon matSuffix>schedule</mat-icon>
+                  </mat-form-field>
+                </div>
+
+                <div class="datetime-info">
+                  <mat-icon>info</mat-icon>
+                  <span>Leave empty for immediate activation or manual control. Times are in your local timezone.</span>
+                </div>
               </div>
 
 
@@ -349,7 +402,7 @@
               <ng-container matColumnDef="key">
                 <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
                 <mat-cell *matCellDef="let feature">
-                  <strong>{{feature.key}}</strong>
+                  <strong>{{feature.displayKey || feature.key}}</strong>
                 </mat-cell>
               </ng-container>
 
@@ -371,6 +424,18 @@
                     [disabled]="!hasSecret(feature)">
                   </mat-slide-toggle>
                   <span class="value-text">{{feature.value}}</span>
+                </mat-cell>
+              </ng-container>
+
+              <ng-container matColumnDef="tags">
+                <mat-header-cell *matHeaderCellDef>Tags</mat-header-cell>
+                <mat-cell *matCellDef="let feature">
+                  <div class="tags-container" *ngIf="feature.tags && feature.tags.length > 0">
+                    <mat-chip *ngFor="let tag of feature.tags" class="tag-chip">
+                      {{tag}}
+                    </mat-chip>
+                  </div>
+                  <span *ngIf="!feature.tags || feature.tags.length === 0" class="no-tags">-</span>
                 </mat-cell>
               </ng-container>
 

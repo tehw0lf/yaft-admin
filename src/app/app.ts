@@ -14,7 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatChipsModule, MatChipInputEvent } from '@angular/material/chips';
 import { MatTableModule } from '@angular/material/table';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatMenuModule } from '@angular/material/menu';
@@ -23,6 +23,8 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { HttpClientModule } from '@angular/common/http';
 
 import { YaftProviderService } from './services/yaft-provider.service';
@@ -30,7 +32,6 @@ import { FilterService } from './services/filter.service';
 import { ExportService } from './services/export.service';
 import { ErrorHandlerService } from './services/error-handler.service';
 import { BulkOperationsService } from './services/bulk-operations.service';
-import { WebSocketService } from './services/websocket.service';
 import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
 import { DragDropDirective } from './directives/drag-drop.directive';
 import { timeRangeValidator } from './validators/time-range.validator';
@@ -65,6 +66,8 @@ import {
     MatTooltipModule,
     MatDialogModule,
     MatCheckboxModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     FeatureFiltersComponent,
     DragDropDirective
   ],
@@ -88,7 +91,7 @@ export class App implements OnInit, OnDestroy {
   
   features: FeatureWithSecret[] = [];
   filteredFeatures: FeatureWithSecret[] = [];
-  displayedColumns: string[] = ['select', 'key', 'status', 'value', 'activeAt', 'disabledAt', 'actions'];
+  displayedColumns: string[] = ['select', 'key', 'status', 'value', 'tags', 'activeAt', 'disabledAt', 'actions'];
 
   get currentDisplayedColumns(): string[] {
     if (this.isBooleanProvider) {
@@ -124,8 +127,7 @@ export class App implements OnInit, OnDestroy {
     private filterService: FilterService,
     private exportService: ExportService,
     private errorHandler: ErrorHandlerService,
-    private bulkOperationsService: BulkOperationsService,
-    private websocketService: WebSocketService
+    private bulkOperationsService: BulkOperationsService
   ) {
     this.connectionForm = this.createConnectionForm();
     this.featureForm = this.createFeatureForm();
@@ -143,17 +145,7 @@ export class App implements OnInit, OnDestroy {
           this.updateFormValidation();
         }
         
-        // Connect WebSocket only for API service providers
-        if (connection.isConnected && 
-            connection.apiUrl && 
-            (connection.type === ProviderType.API_SERVICE || connection.type === ProviderType.API_SERVICE_BOOLEAN)) {
-          const wsUrl = connection.apiUrl.replace(/^http/, 'ws') + '/ws';
-          this.websocketService.connect(wsUrl);
-        } else if (connection.isConnected && 
-                  (connection.type === ProviderType.LOCAL_STORAGE || connection.type === ProviderType.LOCAL_STORAGE_BOOLEAN)) {
-          // Disconnect WebSocket for local storage providers
-          this.websocketService.disconnect();
-        }
+        // WebSocket functionality is not implemented in the Go backend, so we skip WebSocket connection
       });
 
     // Subscribe to features
@@ -171,15 +163,7 @@ export class App implements OnInit, OnDestroy {
         this.filteredFeatures = filteredFeatures;
       });
     
-    // Subscribe to WebSocket feature updates
-    this.websocketService.featureUpdates$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(update => {
-        // Refresh features when remote updates occur
-        if (this.connectionStatus.isConnected) {
-          this.yaftService.loadFeatures();
-        }
-      });
+    // WebSocket feature updates not implemented in Go backend
   }
 
   ngOnDestroy() {
@@ -201,8 +185,14 @@ export class App implements OnInit, OnDestroy {
     return this.fb.group({
       key: ['', Validators.required],
       value: ['false', Validators.required],
+      tags: [[]],
       activeAt: [''],
-      disabledAt: ['']
+      disabledAt: [''],
+      // Separate date and time fields for better UX
+      activeAtDate: [''],
+      activeAtTime: [''],
+      disabledAtDate: [''],
+      disabledAtTime: ['']
     }, { 
       validators: [timeRangeValidator()] 
     });
@@ -212,23 +202,61 @@ export class App implements OnInit, OnDestroy {
     // Clear existing validators for optional fields
     this.featureForm.get('activeAt')?.clearValidators();
     this.featureForm.get('disabledAt')?.clearValidators();
+    this.featureForm.get('activeAtDate')?.clearValidators();
+    this.featureForm.get('activeAtTime')?.clearValidators();
+    this.featureForm.get('disabledAtDate')?.clearValidators();
+    this.featureForm.get('disabledAtTime')?.clearValidators();
 
     if (this.isBooleanProvider) {
       // For boolean providers, disable advanced fields
       this.featureForm.get('activeAt')?.disable();
       this.featureForm.get('disabledAt')?.disable();
+      this.featureForm.get('activeAtDate')?.disable();
+      this.featureForm.get('activeAtTime')?.disable();
+      this.featureForm.get('disabledAtDate')?.disable();
+      this.featureForm.get('disabledAtTime')?.disable();
       // Remove time range validator for boolean providers
       this.featureForm.clearValidators();
     } else {
       // For feature object providers, enable all fields
       this.featureForm.get('activeAt')?.enable();
       this.featureForm.get('disabledAt')?.enable();
+      this.featureForm.get('activeAtDate')?.enable();
+      this.featureForm.get('activeAtTime')?.enable();
+      this.featureForm.get('disabledAtDate')?.enable();
+      this.featureForm.get('disabledAtTime')?.enable();
       // Add time range validator for feature object providers
       this.featureForm.setValidators([timeRangeValidator()]);
     }
 
     // Update validity after changing validators
     this.featureForm.updateValueAndValidity();
+  }
+
+  private combineDateAndTime(dateValue: any, timeValue: any): string | null {
+    if (!dateValue) return null;
+    
+    const date = new Date(dateValue);
+    
+    if (timeValue) {
+      const [hours, minutes] = timeValue.split(':');
+      date.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+    } else {
+      // Default to start of day if no time specified
+      date.setHours(0, 0, 0, 0);
+    }
+    
+    return date.toISOString();
+  }
+
+  private splitDateTimeForForm(isoString: string | null): { date: string, time: string } {
+    if (!isoString) return { date: '', time: '' };
+    
+    const date = new Date(isoString);
+    const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timeStr = date.toTimeString().slice(0, 5); // HH:MM
+    
+    return { date: dateStr, time: timeStr };
   }
 
   get isApiProvider(): boolean {
@@ -333,8 +361,8 @@ export class App implements OnInit, OnDestroy {
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
-      feature.activeAt = formValue.activeAt || null;
-      feature.disabledAt = formValue.disabledAt || null;
+      feature.activeAt = this.combineDateAndTime(formValue.activeAtDate, formValue.activeAtTime);
+      feature.disabledAt = this.combineDateAndTime(formValue.disabledAtDate, formValue.disabledAtTime);
     }
 
     this.yaftService.createFeature(feature)
@@ -345,10 +373,7 @@ export class App implements OnInit, OnDestroy {
           this.showAlert(`Feature '${newFeature.key}' created successfully`, 'success');
           this.featureForm.reset({ value: 'false', tags: [] });
           
-          // Send WebSocket notification
-          if (this.websocketService.isConnected()) {
-            this.websocketService.notifyFeatureUpdate(newFeature, 'create');
-          }
+          // WebSocket notifications not implemented in Go backend
           
           // Show secret if created via API
           if (newFeature.secret) {
@@ -382,8 +407,8 @@ export class App implements OnInit, OnDestroy {
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
-      updates.activeAt = formValue.activeAt || null;
-      updates.disabledAt = formValue.disabledAt || null;
+      updates.activeAt = this.combineDateAndTime(formValue.activeAtDate, formValue.activeAtTime);
+      updates.disabledAt = this.combineDateAndTime(formValue.disabledAtDate, formValue.disabledAtTime);
     }
 
     this.yaftService.updateFeature(this.editingFeature.key, updates, this.editingFeature.secret)
@@ -397,10 +422,7 @@ export class App implements OnInit, OnDestroy {
           this.onCancelEdit();
           this.onRefresh();
           
-          // Send WebSocket notification
-          if (this.websocketService.isConnected()) {
-            this.websocketService.notifyFeatureUpdate(updatedFeature || this.editingFeature!, 'update');
-          }
+          // WebSocket notifications not implemented in Go backend
         },
         error: (error) => {
           this.isCreating = false;
@@ -441,10 +463,7 @@ export class App implements OnInit, OnDestroy {
           this.showAlert(`Feature '${feature.key}' ${enabled ? 'enabled' : 'disabled'}`, 'success');
           this.onRefresh();
           
-          // Send WebSocket notification
-          if (this.websocketService.isConnected()) {
-            this.websocketService.notifyFeatureUpdate(updatedFeature || feature, 'update');
-          }
+          // WebSocket notifications not implemented in Go backend
         },
         error: (error) => {
           this.showAlert(`Failed to update feature: ${error.message}`, 'error');
@@ -457,11 +476,20 @@ export class App implements OnInit, OnDestroy {
     this.editingFeature = feature;
     
     // Populate the form with the feature data
+    const activeAtSplit = this.splitDateTimeForForm(feature.activeAt);
+    const disabledAtSplit = this.splitDateTimeForForm(feature.disabledAt);
+    
     this.featureForm.patchValue({
       key: feature.key,
       value: feature.value,
+      tags: feature.tags || [],
       activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString().slice(0, 16) : '',
-      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : ''
+      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : '',
+      // Populate the new date/time fields
+      activeAtDate: activeAtSplit.date,
+      activeAtTime: activeAtSplit.time,
+      disabledAtDate: disabledAtSplit.date,
+      disabledAtTime: disabledAtSplit.time
     });
     
     // Disable the key field since we can't change it during edit
@@ -473,7 +501,17 @@ export class App implements OnInit, OnDestroy {
   onCancelEdit() {
     this.isEditing = false;
     this.editingFeature = null;
-    this.featureForm.reset({ value: 'false', tags: [] });
+    this.featureForm.reset({ 
+      value: 'false', 
+      tags: [],
+      key: '',
+      activeAt: '',
+      disabledAt: '',
+      activeAtDate: '',
+      activeAtTime: '',
+      disabledAtDate: '',
+      disabledAtTime: ''
+    });
     this.featureForm.get('key')?.enable();
     this.showAlert('Edit cancelled', 'success');
   }
@@ -491,10 +529,7 @@ export class App implements OnInit, OnDestroy {
           next: () => {
             this.showAlert(`Feature '${feature.key}' deleted successfully`, 'success');
             
-            // Send WebSocket notification
-            if (this.websocketService.isConnected()) {
-              this.websocketService.notifyFeatureUpdate(feature, 'delete');
-            }
+            // WebSocket notifications not implemented in Go backend
           },
           error: (error) => {
             this.showAlert(`Failed to delete feature: ${error.message}`, 'error');
@@ -796,6 +831,55 @@ export class App implements OnInit, OnDestroy {
       document.execCommand('copy');
       document.body.removeChild(textArea);
     });
+  }
+
+  // Tag handling methods
+  getTags(): string[] {
+    return this.featureForm.get('tags')?.value || [];
+  }
+
+  addTag(event: MatChipInputEvent): void {
+    const value = (event.input?.value || '').trim();
+    
+    if (value) {
+      // Validate tag format: lowercase, alphanumeric, hyphens only
+      const tagPattern = /^[a-z0-9-]+$/;
+      if (!tagPattern.test(value)) {
+        this.showAlert('Tags must be lowercase, alphanumeric, and hyphens only', 'error');
+        event.input.value = '';
+        return;
+      }
+      
+      // Check for duplicates
+      const currentTags = this.getTags();
+      if (currentTags.includes(value)) {
+        this.showAlert('Tag already exists', 'error');
+        event.input.value = '';
+        return;
+      }
+      
+      // Check maximum tags limit
+      if (currentTags.length >= 10) {
+        this.showAlert('Maximum 10 tags allowed per feature', 'error');
+        event.input.value = '';
+        return;
+      }
+      
+      // Add the tag
+      const updatedTags = [...currentTags, value];
+      this.featureForm.get('tags')?.setValue(updatedTags);
+    }
+
+    // Clear the input
+    if (event.input) {
+      event.input.value = '';
+    }
+  }
+
+  removeTag(tagToRemove: string): void {
+    const currentTags = this.getTags();
+    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+    this.featureForm.get('tags')?.setValue(updatedTags);
   }
 
   private showAlert(message: string, type: 'success' | 'error') {

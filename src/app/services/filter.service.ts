@@ -10,6 +10,7 @@ export class FilterService {
   private filterSubject = new BehaviorSubject<FeatureFilter>({
     searchText: '',
     status: [],
+    tags: [],
     dateRange: {
       start: null,
       end: null
@@ -41,6 +42,7 @@ export class FilterService {
     this.filterSubject.next({
       searchText: '',
       status: [],
+      tags: [],
       dateRange: {
         start: null,
         end: null
@@ -72,6 +74,17 @@ export class FilterService {
         }
       }
 
+      // Tags filter
+      if (filter.tags.length > 0) {
+        const featureTags = feature.tags || [];
+        // Check if feature has any of the selected tags
+        const hasMatchingTag = filter.tags.some(filterTag => 
+          featureTags.includes(filterTag)
+        );
+        if (!hasMatchingTag) {
+          return false;
+        }
+      }
 
       // Date range filter
       if (filter.dateRange.start || filter.dateRange.end) {

@@ -48,25 +48,146 @@ export class YaftProviderService {
       return throwError(() => new Error('API URL is required'));
     }
 
-    // Test connection by trying to fetch collection hash or a simple health check
-    const testUrl = connection.baseUUID 
-      ? `${connection.apiUrl}/collectionHash/${connection.baseUUID}`
-      : `${connection.apiUrl}/features/test`;
+    if (connection.baseUUID) {
+      // Test existing collection by querying features
+      return this.testExistingCollection(connection);
+    } else {
+      // No baseUUID - create a new collection via POST and get the secret
+      return this.createNewCollection(connection);
+    }
+  }
 
-    return this.http.get(testUrl).pipe(
-      map(() => {
+  private testExistingCollection(connection: ProviderConnection): Observable<boolean> {
+    const testUrl = `${connection.apiUrl}/features/${connection.baseUUID}`;
+    
+    return this.http.get<FeaturesResponse>(testUrl).pipe(
+      map((response) => {
+        // Successfully connected to existing collection
         connection.isConnected = true;
         this.connectionSubject.next(connection);
-        // Always load features on successful connection
-        this.loadFeatures().subscribe({
-          error: (error) => console.warn('Failed to load initial features:', error)
+        
+        // Load the features we just received
+        console.log('API response for existing collection:', response);
+        const apiFeatures = response.toggles || response.value || [];
+        console.log('Extracted features from existing collection:', apiFeatures);
+        
+        const collectionSecret = this.secretsMap.get('collection-secret');
+        const featuresWithSecrets: FeatureWithSecret[] = apiFeatures.map((feature, index) => {
+          console.log(`Existing feature ${index}:`, feature);
+          
+          // Map Go backend capitalized fields to TypeScript lowercase interface
+          const normalizedFeature: Feature = {
+            key: (feature as any).Key || feature.key,
+            value: (feature as any).Value || feature.value,
+            activeAt: (feature as any).ActiveAt || feature.activeAt,
+            disabledAt: (feature as any).DisabledAt || feature.disabledAt,
+            tags: (feature as any).Tags || feature.tags || [],
+          };
+          
+          return {
+            ...normalizedFeature,
+            displayKey: this.extractDisplayKey(normalizedFeature.key),
+            secret: collectionSecret || this.generateMockSecret()
+          };
         });
+        
+        this.featuresSubject.next(featuresWithSecrets);
         return true;
       }),
       catchError((error) => {
+        console.log('Existing collection test error:', {
+          status: error.status,
+          url: testUrl,
+          baseUUID: connection.baseUUID
+        });
+        
         connection.isConnected = false;
         this.connectionSubject.next(connection);
-        return throwError(() => error);
+        
+        if (error.status === 404) {
+          return throwError(() => new Error(`Collection with UUID '${connection.baseUUID}' not found`));
+        } else if (error.status === 0) {
+          return throwError(() => new Error('Cannot reach the API server. Please check if it\'s running and accessible.'));
+        } else {
+          return throwError(() => new Error(`API connection failed: ${error.status} ${error.statusText || error.message || 'Unknown error'}`));
+        }
+      })
+    );
+  }
+
+  private createNewCollection(connection: ProviderConnection): Observable<boolean> {
+    // Create a test feature to establish a new collection and get the secret
+    const testFeature = {
+      key: 'connection-test',
+      value: 'true'
+    };
+
+    return this.http.post<FeatureToggleResponse>(`${connection.apiUrl}/features`, testFeature).pipe(
+      map((response) => {
+        // Map Go backend capitalized fields
+        const responseKey = (response as any).key || (response as any).Key;
+        const responseSecret = (response as any).secret || (response as any).Secret;
+        
+        console.log('New collection created:', {
+          key: responseKey,
+          hasSecret: !!responseSecret
+        });
+        
+        if (responseSecret) {
+          // Store the collection secret for future operations
+          this.secretsMap.set('collection-secret', responseSecret);
+          console.log('Collection secret stored for future operations');
+        }
+
+        // Extract UUID from the key (format: "uuid|feature-name")
+        const uuidMatch = responseKey.split('|')[0];
+        if (uuidMatch) {
+          // Update the connection with the extracted UUID
+          connection.baseUUID = uuidMatch;
+          console.log('Extracted collection UUID:', uuidMatch);
+        }
+
+        connection.isConnected = true;
+        this.connectionSubject.next(connection);
+
+        // Now load all features from the collection using the UUID
+        this.loadFeatures().subscribe({
+          next: (features) => {
+            console.log(`Loaded ${features.length} features from new collection`);
+          },
+          error: (error) => {
+            console.warn('Failed to load features from new collection:', error);
+            // Fallback: start with just the test feature we created
+            const newFeature: FeatureWithSecret = {
+              key: responseKey,
+              value: (response as any).value || (response as any).Value,
+              activeAt: (response as any).activeAt || (response as any).ActiveAt || null,
+              disabledAt: (response as any).disabledAt || (response as any).DisabledAt || null,
+              tags: (response as any).tags || (response as any).Tags || [],
+              displayKey: this.extractDisplayKey(responseKey),
+              secret: responseSecret || 'mock-secret'
+            };
+            this.featuresSubject.next([newFeature]);
+          }
+        });
+        
+        return true;
+      }),
+      catchError((error) => {
+        console.log('New collection creation error:', {
+          status: error.status,
+          url: `${connection.apiUrl}/features`,
+          error: error.message
+        });
+        
+        connection.isConnected = false;
+        this.connectionSubject.next(connection);
+        
+        if (error.status === 0) {
+          return throwError(() => new Error('Cannot reach the API server. Please check if it\'s running and accessible.'));
+        } else {
+          return throwError(() => new Error(`Failed to create new collection: ${error.status} ${error.statusText || error.message || 'Unknown error'}`));
+        }
       })
     );
   }
@@ -110,21 +231,40 @@ export class YaftProviderService {
       return throwError(() => new Error('API URL not configured'));
     }
 
-    const url = connection.baseUUID 
-      ? `${connection.apiUrl}/features/${connection.baseUUID}`
-      : `${connection.apiUrl}/features`;
+    // Only load features if we have a baseUUID - otherwise start with empty list
+    if (!connection.baseUUID) {
+      // No baseUUID means new collection - start with empty features
+      this.featuresSubject.next([]);
+      return of([]);
+    }
+
+    const url = `${connection.apiUrl}/features/${connection.baseUUID}`;
 
     return this.http.get<FeaturesResponse>(url).pipe(
       map((response) => {
+        console.log('API response for loading features:', response);
         const apiFeatures = response.toggles || response.value || [];
-        // Convert to FeatureWithSecret and generate secrets for admin UI
-        const featuresWithSecrets: FeatureWithSecret[] = apiFeatures.map(feature => {
-          const secret = this.secretsMap.get(feature.key) || this.generateMockSecret();
-          this.secretsMap.set(feature.key, secret);
+        console.log('Extracted features:', apiFeatures);
+        
+        // Convert to FeatureWithSecret and use the cached collection secret
+        const collectionSecret = this.secretsMap.get('collection-secret');
+        const featuresWithSecrets: FeatureWithSecret[] = apiFeatures.map((feature, index) => {
+          console.log(`Feature ${index}:`, feature);
+          
+          // Map Go backend capitalized fields to TypeScript lowercase interface
+          const normalizedFeature: Feature = {
+            key: (feature as any).Key || feature.key,
+            value: (feature as any).Value || feature.value,
+            activeAt: (feature as any).ActiveAt || feature.activeAt,
+            disabledAt: (feature as any).DisabledAt || feature.disabledAt,
+            tags: (feature as any).Tags || feature.tags || [],
+          };
           
           return {
-            ...feature,
-            secret: secret // Admin UI only - not from API
+            ...normalizedFeature,
+            // Store full key for API operations, but provide display key
+            displayKey: this.extractDisplayKey(normalizedFeature.key),
+            secret: collectionSecret || this.generateMockSecret() // Use collection secret for all features
           };
         });
         
@@ -133,7 +273,9 @@ export class YaftProviderService {
       }),
       catchError((error) => {
         console.error('Failed to load features:', error);
-        return throwError(() => error);
+        // If we can't load features, start with empty list but don't fail
+        this.featuresSubject.next([]);
+        return of([]);
       })
     );
   }
@@ -186,6 +328,7 @@ export class YaftProviderService {
             value: value === true || value === 'true' ? 'true' : 'false',
             activeAt: null,
             disabledAt: null,
+            tags: [],
           });
         } else if (typeof value === 'object' && value !== null) {
           // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
@@ -195,6 +338,7 @@ export class YaftProviderService {
             value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
             activeAt: featureObj.activeAt || null,
             disabledAt: featureObj.disabledAt || null,
+            tags: featureObj.tags || [],
           });
         }
       } catch (error) {
@@ -230,12 +374,27 @@ export class YaftProviderService {
       return throwError(() => new Error('API URL not configured'));
     }
 
-    const payload = {
-      key: feature.key,
+    // Get the collection secret for existing collection
+    const collectionSecret = this.secretsMap.get('collection-secret');
+    
+    // If we have a baseUUID, prefix the key and include the secret
+    let keyToSend = feature.key;
+    if (connection.baseUUID && collectionSecret) {
+      keyToSend = `${connection.baseUUID}|${feature.key}`;
+    }
+
+    const payload: any = {
+      key: keyToSend,
       value: feature.value,
       activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString() : null,
-      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString() : null
+      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString() : null,
+      tags: feature.tags || []
     };
+
+    // Include secret for existing collections
+    if (connection.baseUUID && collectionSecret) {
+      payload.secret = collectionSecret;
+    }
 
     return this.http.post<FeatureToggleResponse>(`${connection.apiUrl}/features`, payload).pipe(
       map((response) => {
@@ -254,13 +413,22 @@ export class YaftProviderService {
           }
         }
         
-        this.secretsMap.set(response.key, secret);
+        // Map Go backend capitalized fields to TypeScript lowercase interface
+        const normalizedKey = (response as any).key || (response as any).Key;
+        const normalizedValue = (response as any).value || (response as any).Value;
+        const normalizedActiveAt = (response as any).activeAt || (response as any).ActiveAt;
+        const normalizedDisabledAt = (response as any).disabledAt || (response as any).DisabledAt;
+        const normalizedTags = (response as any).tags || (response as any).Tags || [];
+        
+        this.secretsMap.set(normalizedKey, secret);
         
         const newFeature: FeatureWithSecret = {
-          key: response.key,
-          value: response.value,
-          activeAt: response.activeAt,
-          disabledAt: response.disabledAt,
+          key: normalizedKey,
+          value: normalizedValue,
+          activeAt: normalizedActiveAt,
+          disabledAt: normalizedDisabledAt,
+          tags: normalizedTags,
+          displayKey: this.extractDisplayKey(normalizedKey),
           secret: secret // From backend or cached collection secret
         };
         
@@ -348,10 +516,11 @@ export class YaftProviderService {
       headers: { 'Authorization': `Bearer ${collectionSecret}` }
     }).pipe(
       map((response) => ({
-        key: response.key,
-        value: response.value,
-        activeAt: response.activeAt,
-        disabledAt: response.disabledAt,
+        key: (response as any).key || (response as any).Key,
+        value: (response as any).value || (response as any).Value,
+        activeAt: (response as any).activeAt || (response as any).ActiveAt,
+        disabledAt: (response as any).disabledAt || (response as any).DisabledAt,
+        displayKey: this.extractDisplayKey((response as any).key || (response as any).Key),
         secret: collectionSecret
       })),
       catchError((error) => {
@@ -463,10 +632,12 @@ export class YaftProviderService {
       {}
     ).pipe(
       map((response) => ({
-        key: response.key,
-        value: response.value,
-        activeAt: response.activeAt,
-        disabledAt: response.disabledAt,
+        key: (response as any).key || (response as any).Key,
+        value: (response as any).value || (response as any).Value,
+        activeAt: (response as any).activeAt || (response as any).ActiveAt,
+        disabledAt: (response as any).disabledAt || (response as any).DisabledAt,
+        tags: (response as any).tags || (response as any).Tags || [],
+        displayKey: this.extractDisplayKey((response as any).key || (response as any).Key),
         secret: secret
       })),
       catchError((error) => throwError(() => error))
@@ -484,10 +655,12 @@ export class YaftProviderService {
       {}
     ).pipe(
       map((response) => ({
-        key: response.key,
-        value: response.value,
-        activeAt: response.activeAt,
-        disabledAt: response.disabledAt,
+        key: (response as any).key || (response as any).Key,
+        value: (response as any).value || (response as any).Value,
+        activeAt: (response as any).activeAt || (response as any).ActiveAt,
+        disabledAt: (response as any).disabledAt || (response as any).DisabledAt,
+        tags: (response as any).tags || (response as any).Tags || [],
+        displayKey: this.extractDisplayKey((response as any).key || (response as any).Key),
         secret: secret
       })),
       catchError((error) => throwError(() => error))
@@ -527,6 +700,18 @@ export class YaftProviderService {
 
   private generateMockSecret(): string {
     return 'mock-secret-' + Math.random().toString(36).substring(2, 15);
+  }
+
+  private extractDisplayKey(fullKey: string | undefined): string {
+    // Handle undefined/null keys
+    if (!fullKey) {
+      console.warn('Feature key is undefined or null');
+      return 'unknown-feature';
+    }
+    
+    // Extract the display name from UUID-prefixed keys (e.g., "uuid|feature-name" -> "feature-name")
+    const parts = fullKey.split('|');
+    return parts.length > 1 ? parts[1] : fullKey;
   }
 
   getCurrentConnection(): ProviderConnection {
