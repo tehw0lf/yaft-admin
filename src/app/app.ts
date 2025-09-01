@@ -356,7 +356,8 @@ export class App implements OnInit, OnDestroy {
       key: formValue.key,
       value: formValue.value,
       activeAt: null,
-      disabledAt: null
+      disabledAt: null,
+      tags: formValue.tags || []
     };
 
     // Only include advanced fields for feature object providers
@@ -402,7 +403,8 @@ export class App implements OnInit, OnDestroy {
     const formValue = this.featureForm.getRawValue(); // Get raw value to include disabled fields
     
     const updates: Partial<Feature> = {
-      value: formValue.value
+      value: formValue.value,
+      tags: formValue.tags || []
     };
 
     // Only include advanced fields for feature object providers
