@@ -46,7 +46,7 @@ export interface DashboardMetrics {
         </h2>
         <p class="dashboard-subtitle">Feature Toggle Overview & Analytics</p>
       </div>
-
+    
       <!-- Connection Status Banner -->
       <mat-card class="status-banner" [class]="getStatusClass()">
         <mat-card-content>
@@ -59,7 +59,7 @@ export interface DashboardMetrics {
           </div>
         </mat-card-content>
       </mat-card>
-
+    
       <!-- Metrics Overview -->
       <div class="metrics-grid">
         <!-- Total Features -->
@@ -74,7 +74,7 @@ export interface DashboardMetrics {
             </div>
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Active Features -->
         <mat-card class="metric-card active-features">
           <mat-card-content>
@@ -90,7 +90,7 @@ export interface DashboardMetrics {
             </div>
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Inactive Features -->
         <mat-card class="metric-card inactive-features">
           <mat-card-content>
@@ -106,7 +106,7 @@ export interface DashboardMetrics {
             </div>
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Scheduled Features -->
         <mat-card class="metric-card scheduled-features">
           <mat-card-content>
@@ -123,7 +123,7 @@ export interface DashboardMetrics {
           </mat-card-content>
         </mat-card>
       </div>
-
+    
       <!-- Activity Progress Bar -->
       <mat-card class="progress-card">
         <mat-card-header>
@@ -131,9 +131,9 @@ export interface DashboardMetrics {
         </mat-card-header>
         <mat-card-content>
           <div class="progress-container">
-            <mat-progress-bar 
-              mode="buffer" 
-              [value]="getActivePercentage()" 
+            <mat-progress-bar
+              mode="buffer"
+              [value]="getActivePercentage()"
               [bufferValue]="getActivePercentage() + getScheduledPercentage()">
             </mat-progress-bar>
             <div class="progress-legend">
@@ -153,7 +153,7 @@ export interface DashboardMetrics {
           </div>
         </mat-card-content>
       </mat-card>
-
+    
       <!-- Two Column Layout -->
       <div class="dashboard-columns">
         <!-- Left Column -->
@@ -167,21 +167,25 @@ export interface DashboardMetrics {
               </mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <div *ngIf="metrics.recentlyCreated.length === 0" class="empty-state">
-                <mat-icon>info</mat-icon>
-                <p>No recent features</p>
-              </div>
-              <div *ngFor="let feature of metrics.recentlyCreated" class="feature-item">
-                <div class="feature-key">{{feature.key}}</div>
-                <div class="feature-status">
-                  <mat-chip [class]="'status-chip status-' + getFeatureStatus(feature).status">
-                    {{getFeatureStatus(feature).status | titlecase}}
-                  </mat-chip>
+              @if (metrics.recentlyCreated.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>info</mat-icon>
+                  <p>No recent features</p>
                 </div>
-              </div>
+              }
+              @for (feature of metrics.recentlyCreated; track feature) {
+                <div class="feature-item">
+                  <div class="feature-key">{{feature.key}}</div>
+                  <div class="feature-status">
+                    <mat-chip [class]="'status-chip status-' + getFeatureStatus(feature).status">
+                      {{getFeatureStatus(feature).status | titlecase}}
+                    </mat-chip>
+                  </div>
+                </div>
+              }
             </mat-card-content>
           </mat-card>
-
+    
           <!-- Most Used Tags -->
           <mat-card class="tags-card">
             <mat-card-header>
@@ -191,20 +195,24 @@ export interface DashboardMetrics {
               </mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <div *ngIf="metrics.mostUsedTags.length === 0" class="empty-state">
-                <mat-icon>info</mat-icon>
-                <p>No tags used yet</p>
-              </div>
-              <div *ngFor="let tagInfo of metrics.mostUsedTags" class="tag-stat">
-                <mat-chip [matTooltip]="tagInfo.count + ' features'">
-                  {{tagInfo.tag}}
-                </mat-chip>
-                <div class="tag-count">{{tagInfo.count}}</div>
-              </div>
+              @if (metrics.mostUsedTags.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>info</mat-icon>
+                  <p>No tags used yet</p>
+                </div>
+              }
+              @for (tagInfo of metrics.mostUsedTags; track tagInfo) {
+                <div class="tag-stat">
+                  <mat-chip [matTooltip]="tagInfo.count + ' features'">
+                    {{tagInfo.tag}}
+                  </mat-chip>
+                  <div class="tag-count">{{tagInfo.count}}</div>
+                </div>
+              }
             </mat-card-content>
           </mat-card>
         </div>
-
+    
         <!-- Right Column -->
         <div class="dashboard-column">
           <!-- Upcoming Scheduled -->
@@ -216,25 +224,29 @@ export interface DashboardMetrics {
               </mat-card-title>
             </mat-card-header>
             <mat-card-content>
-              <div *ngIf="metrics.upcomingScheduled.length === 0" class="empty-state">
-                <mat-icon>info</mat-icon>
-                <p>No scheduled changes</p>
-              </div>
-              <div *ngFor="let feature of metrics.upcomingScheduled" class="scheduled-item">
-                <div class="scheduled-info">
-                  <div class="feature-key">{{feature.key}}</div>
-                  <div class="scheduled-time">
-                    <mat-icon>schedule</mat-icon>
-                    <span>{{getNextScheduledTime(feature)}}</span>
+              @if (metrics.upcomingScheduled.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>info</mat-icon>
+                  <p>No scheduled changes</p>
+                </div>
+              }
+              @for (feature of metrics.upcomingScheduled; track feature) {
+                <div class="scheduled-item">
+                  <div class="scheduled-info">
+                    <div class="feature-key">{{feature.key}}</div>
+                    <div class="scheduled-time">
+                      <mat-icon>schedule</mat-icon>
+                      <span>{{getNextScheduledTime(feature)}}</span>
+                    </div>
+                  </div>
+                  <div class="scheduled-action">
+                    {{getScheduledAction(feature)}}
                   </div>
                 </div>
-                <div class="scheduled-action">
-                  {{getScheduledAction(feature)}}
-                </div>
-              </div>
+              }
             </mat-card-content>
           </mat-card>
-
+    
           <!-- Quick Actions -->
           <mat-card class="quick-actions-card">
             <mat-card-header>
@@ -263,7 +275,7 @@ export interface DashboardMetrics {
         </div>
       </div>
     </div>
-  `,
+    `,
   styles: [`
     .dashboard-container {
       padding: 24px;

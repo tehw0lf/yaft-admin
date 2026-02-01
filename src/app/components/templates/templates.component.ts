@@ -60,10 +60,10 @@ import {
           Feature Templates
         </h2>
         <p class="templates-subtitle">Create features quickly using pre-defined templates</p>
-        
+    
         <div class="header-actions">
-          <input type="file" #fileInput (change)="onImportTemplates($event)" 
-                 accept=".json" style="display: none;">
+          <input type="file" #fileInput (change)="onImportTemplates($event)"
+            accept=".json" style="display: none;">
           <button mat-button (click)="fileInput.click()">
             <mat-icon>upload</mat-icon>
             Import
@@ -78,115 +78,130 @@ import {
           </button>
         </div>
       </div>
-
+    
       <mat-tab-group class="templates-tabs" [dynamicHeight]="true">
         <!-- Browse Templates Tab -->
         <mat-tab label="Browse Templates">
           <div class="tab-content">
             <!-- Quick Access - Most Used -->
-            <mat-card class="quick-access-card" *ngIf="mostUsedTemplates.length > 0">
-              <mat-card-header>
-                <mat-card-title>
-                  <mat-icon>star</mat-icon>
-                  Most Used Templates
-                </mat-card-title>
-              </mat-card-header>
-              <mat-card-content>
-                <div class="template-grid">
-                  <div *ngFor="let template of mostUsedTemplates" 
-                       class="template-card quick-template"
-                       (click)="useTemplate(template)">
-                    <div class="template-icon">
-                      <mat-icon>{{template.icon}}</mat-icon>
-                    </div>
-                    <div class="template-info">
-                      <h4>{{template.name}}</h4>
-                      <p>{{template.description}}</p>
-                      <div class="template-stats">
-                        <span class="usage-count">{{template.usageCount}} uses</span>
+            @if (mostUsedTemplates.length > 0) {
+              <mat-card class="quick-access-card">
+                <mat-card-header>
+                  <mat-card-title>
+                    <mat-icon>star</mat-icon>
+                    Most Used Templates
+                  </mat-card-title>
+                </mat-card-header>
+                <mat-card-content>
+                  <div class="template-grid">
+                    @for (template of mostUsedTemplates; track template) {
+                      <div
+                        class="template-card quick-template"
+                        (click)="useTemplate(template)">
+                        <div class="template-icon">
+                          <mat-icon>{{template.icon}}</mat-icon>
+                        </div>
+                        <div class="template-info">
+                          <h4>{{template.name}}</h4>
+                          <p>{{template.description}}</p>
+                          <div class="template-stats">
+                            <span class="usage-count">{{template.usageCount}} uses</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    }
                   </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-
+                </mat-card-content>
+              </mat-card>
+            }
+    
             <!-- Templates by Category -->
-            <div *ngFor="let category of categories" class="category-section">
-              <mat-expansion-panel>
-                <mat-expansion-panel-header>
-                  <mat-panel-title>
-                    <mat-icon>{{category.icon}}</mat-icon>
-                    {{category.name}}
-                  </mat-panel-title>
-                  <mat-panel-description>
-                    {{category.description}} ({{category.templates.length}} templates)
-                  </mat-panel-description>
-                </mat-expansion-panel-header>
-                
-                <div class="template-grid">
-                  <mat-card *ngFor="let template of category.templates" 
-                           class="template-card"
-                           [class.built-in]="template.isBuiltIn">
-                    <mat-card-header>
-                      <mat-card-title>
-                        <mat-icon>{{template.icon}}</mat-icon>
-                        {{template.name}}
-                      </mat-card-title>
-                      <div class="template-actions">
-                        <button mat-icon-button [matMenuTriggerFor]="templateMenu">
-                          <mat-icon>more_vert</mat-icon>
-                        </button>
-                        <mat-menu #templateMenu="matMenu">
-                          <button mat-menu-item (click)="useTemplate(template)">
+            @for (category of categories; track category) {
+              <div class="category-section">
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-icon>{{category.icon}}</mat-icon>
+                      {{category.name}}
+                    </mat-panel-title>
+                    <mat-panel-description>
+                      {{category.description}} ({{category.templates.length}} templates)
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="template-grid">
+                    @for (template of category.templates; track template) {
+                      <mat-card
+                        class="template-card"
+                        [class.built-in]="template.isBuiltIn">
+                        <mat-card-header>
+                          <mat-card-title>
+                            <mat-icon>{{template.icon}}</mat-icon>
+                            {{template.name}}
+                          </mat-card-title>
+                          <div class="template-actions">
+                            <button mat-icon-button [matMenuTriggerFor]="templateMenu">
+                              <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu #templateMenu="matMenu">
+                              <button mat-menu-item (click)="useTemplate(template)">
+                                <mat-icon>play_arrow</mat-icon>
+                                Use Template
+                              </button>
+                              <button mat-menu-item (click)="duplicateTemplate(template)">
+                                <mat-icon>content_copy</mat-icon>
+                                Duplicate
+                              </button>
+                              @if (!template.isBuiltIn) {
+                                <button mat-menu-item
+                                  (click)="editTemplate(template)">
+                                  <mat-icon>edit</mat-icon>
+                                  Edit
+                                </button>
+                              }
+                              @if (!template.isBuiltIn) {
+                                <button mat-menu-item
+                                  (click)="deleteTemplate(template)">
+                                  <mat-icon>delete</mat-icon>
+                                  Delete
+                                </button>
+                              }
+                            </mat-menu>
+                          </div>
+                        </mat-card-header>
+                        <mat-card-content>
+                          <p class="template-description">{{template.description}}</p>
+                          <div class="template-preview">
+                            <strong>Key Pattern:</strong> <code>{{template.keyTemplate}}</code>
+                          </div>
+                          <div class="template-tags">
+                            <mat-chip-set>
+                              @for (tag of template.tags; track tag) {
+                                <mat-chip>{{tag}}</mat-chip>
+                              }
+                            </mat-chip-set>
+                          </div>
+                          <div class="template-footer">
+                            <span class="usage-count">{{template.usageCount}} uses</span>
+                            @if (template.isBuiltIn) {
+                              <span class="template-type">Built-in</span>
+                            }
+                          </div>
+                        </mat-card-content>
+                        <mat-card-actions>
+                          <button mat-raised-button color="primary" (click)="useTemplate(template)">
                             <mat-icon>play_arrow</mat-icon>
                             Use Template
                           </button>
-                          <button mat-menu-item (click)="duplicateTemplate(template)">
-                            <mat-icon>content_copy</mat-icon>
-                            Duplicate
-                          </button>
-                          <button mat-menu-item *ngIf="!template.isBuiltIn" 
-                                  (click)="editTemplate(template)">
-                            <mat-icon>edit</mat-icon>
-                            Edit
-                          </button>
-                          <button mat-menu-item *ngIf="!template.isBuiltIn" 
-                                  (click)="deleteTemplate(template)">
-                            <mat-icon>delete</mat-icon>
-                            Delete
-                          </button>
-                        </mat-menu>
-                      </div>
-                    </mat-card-header>
-                    <mat-card-content>
-                      <p class="template-description">{{template.description}}</p>
-                      <div class="template-preview">
-                        <strong>Key Pattern:</strong> <code>{{template.keyTemplate}}</code>
-                      </div>
-                      <div class="template-tags">
-                        <mat-chip-set>
-                          <mat-chip *ngFor="let tag of template.tags">{{tag}}</mat-chip>
-                        </mat-chip-set>
-                      </div>
-                      <div class="template-footer">
-                        <span class="usage-count">{{template.usageCount}} uses</span>
-                        <span class="template-type" *ngIf="template.isBuiltIn">Built-in</span>
-                      </div>
-                    </mat-card-content>
-                    <mat-card-actions>
-                      <button mat-raised-button color="primary" (click)="useTemplate(template)">
-                        <mat-icon>play_arrow</mat-icon>
-                        Use Template
-                      </button>
-                    </mat-card-actions>
-                  </mat-card>
-                </div>
-              </mat-expansion-panel>
-            </div>
+                        </mat-card-actions>
+                      </mat-card>
+                    }
+                  </div>
+                </mat-expansion-panel>
+              </div>
+            }
           </div>
         </mat-tab>
-
+    
         <!-- Recent Usage Tab -->
         <mat-tab label="Recent Usage">
           <div class="tab-content">
@@ -198,35 +213,39 @@ import {
                 </mat-card-title>
               </mat-card-header>
               <mat-card-content>
-                <div *ngIf="recentUsage.length === 0" class="empty-state">
-                  <mat-icon>info</mat-icon>
-                  <p>No recent template usage</p>
-                  <p>Start using templates to see your history here</p>
-                </div>
-                
-                <div *ngFor="let usage of recentUsage" class="usage-item">
-                  <div class="usage-info">
-                    <div class="usage-feature">
-                      <strong>{{usage.featureKey}}</strong>
-                      <span class="usage-template">from "{{getTemplateName(usage.templateId)}}"</span>
+                @if (recentUsage.length === 0) {
+                  <div class="empty-state">
+                    <mat-icon>info</mat-icon>
+                    <p>No recent template usage</p>
+                    <p>Start using templates to see your history here</p>
+                  </div>
+                }
+    
+                @for (usage of recentUsage; track usage) {
+                  <div class="usage-item">
+                    <div class="usage-info">
+                      <div class="usage-feature">
+                        <strong>{{usage.featureKey}}</strong>
+                        <span class="usage-template">from "{{getTemplateName(usage.templateId)}}"</span>
+                      </div>
+                      <div class="usage-date">
+                        {{usage.createdAt | date:'short'}}
+                      </div>
                     </div>
-                    <div class="usage-date">
-                      {{usage.createdAt | date:'short'}}
+                    <div class="usage-actions">
+                      <button mat-icon-button
+                        matTooltip="Use this template again"
+                        (click)="reuseTemplate(usage.templateId)">
+                        <mat-icon>refresh</mat-icon>
+                      </button>
                     </div>
                   </div>
-                  <div class="usage-actions">
-                    <button mat-icon-button 
-                            matTooltip="Use this template again"
-                            (click)="reuseTemplate(usage.templateId)">
-                      <mat-icon>refresh</mat-icon>
-                    </button>
-                  </div>
-                </div>
+                }
               </mat-card-content>
             </mat-card>
           </div>
         </mat-tab>
-
+    
         <!-- Create Template Tab -->
         <mat-tab label="Create Template">
           <div class="tab-content">
@@ -243,39 +262,45 @@ import {
                     <mat-form-field appearance="outline">
                       <mat-label>Template Name</mat-label>
                       <input matInput formControlName="name" placeholder="My Custom Template">
-                      <mat-error *ngIf="createTemplateForm.get('name')?.hasError('required')">
-                        Name is required
-                      </mat-error>
+                      @if (createTemplateForm.get('name')?.hasError('required')) {
+                        <mat-error>
+                          Name is required
+                        </mat-error>
+                      }
                     </mat-form-field>
-
+    
                     <mat-form-field appearance="outline">
                       <mat-label>Category</mat-label>
                       <mat-select formControlName="category">
-                        <mat-option *ngFor="let cat of categories" [value]="cat.name">
-                          {{cat.name}}
-                        </mat-option>
+                        @for (cat of categories; track cat) {
+                          <mat-option [value]="cat.name">
+                            {{cat.name}}
+                          </mat-option>
+                        }
                         <mat-option value="Custom">Custom</mat-option>
                       </mat-select>
                     </mat-form-field>
                   </div>
-
+    
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Description</mat-label>
                     <textarea matInput formControlName="description" rows="2"
-                              placeholder="Describe what this template is for..."></textarea>
+                    placeholder="Describe what this template is for..."></textarea>
                   </mat-form-field>
-
+    
                   <div class="form-row">
                     <mat-form-field appearance="outline">
                       <mat-label>Key Template</mat-label>
-                      <input matInput formControlName="keyTemplate" 
-                             placeholder="{{'{{'}}feature_name{{'}}'}}_{{'{{'}}version{{'}}'}}">
+                      <input matInput formControlName="keyTemplate"
+                        placeholder="{{'{{'}}feature_name{{'}}'}}_{{'{{'}}version{{'}}'}}">
                       <mat-hint>Use {{'{{'}}variable_name{{'}}'}} for dynamic values</mat-hint>
-                      <mat-error *ngIf="createTemplateForm.get('keyTemplate')?.hasError('required')">
-                        Key template is required
-                      </mat-error>
+                      @if (createTemplateForm.get('keyTemplate')?.hasError('required')) {
+                        <mat-error>
+                          Key template is required
+                        </mat-error>
+                      }
                     </mat-form-field>
-
+    
                     <mat-form-field appearance="outline">
                       <mat-label>Default Value</mat-label>
                       <mat-select formControlName="value">
@@ -284,16 +309,16 @@ import {
                       </mat-select>
                     </mat-form-field>
                   </div>
-
+    
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Tags (comma-separated)</mat-label>
-                    <input matInput formControlName="tagsInput" 
-                           placeholder="tag1, tag2, tag3">
+                    <input matInput formControlName="tagsInput"
+                      placeholder="tag1, tag2, tag3">
                   </mat-form-field>
-
+    
                   <div class="form-actions">
-                    <button mat-raised-button color="primary" type="submit" 
-                            [disabled]="createTemplateForm.invalid">
+                    <button mat-raised-button color="primary" type="submit"
+                      [disabled]="createTemplateForm.invalid">
                       <mat-icon>save</mat-icon>
                       Create Template
                     </button>
@@ -308,7 +333,7 @@ import {
         </mat-tab>
       </mat-tab-group>
     </div>
-  `,
+    `,
   styles: [`
     .templates-container {
       padding: 24px;

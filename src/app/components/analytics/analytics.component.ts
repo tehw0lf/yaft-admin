@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 
 // Angular Material Imports
@@ -64,7 +64,6 @@ export interface AnalyticsData {
   selector: 'app-analytics',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -76,7 +75,7 @@ export interface AnalyticsData {
     MatTabsModule,
     MatProgressBarModule,
     MatChipsModule
-  ],
+],
   template: `
     <div class="analytics-container">
       <div class="analytics-header">
@@ -85,7 +84,7 @@ export interface AnalyticsData {
           Analytics & Insights
         </h2>
         <p class="analytics-subtitle">Comprehensive feature toggle analytics and performance metrics</p>
-        
+    
         <div class="header-controls">
           <mat-form-field appearance="outline">
             <mat-label>Time Range</mat-label>
@@ -96,14 +95,14 @@ export interface AnalyticsData {
               <mat-option value="1y">Last year</mat-option>
             </mat-select>
           </mat-form-field>
-          
+    
           <button mat-raised-button (click)="refreshData()" [disabled]="isLoading">
             <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
             Refresh
           </button>
         </div>
       </div>
-
+    
       <div class="analytics-grid">
         <!-- Overview Metrics -->
         <mat-card class="metrics-overview-card">
@@ -135,36 +134,36 @@ export interface AnalyticsData {
                 <div class="metric-percentage">{{analyticsData.featureMetrics.percentages.scheduled}}%</div>
               </div>
             </div>
-            
+    
             <!-- Visual Distribution Chart -->
             <div class="distribution-chart">
               <h4>Feature Status Distribution</h4>
               <div class="chart-container">
                 <div class="pie-chart">
                   <svg viewBox="0 0 200 200" class="pie-svg">
-                    <circle cx="100" cy="100" r="80" 
-                            fill="none" 
-                            stroke="#4caf50" 
-                            stroke-width="40"
-                            [attr.stroke-dasharray]="getPieSegment(analyticsData.featureMetrics.percentages.active) + ' ' + (100 - getPieSegment(analyticsData.featureMetrics.percentages.active))"
-                            stroke-dashoffset="25"
-                            class="pie-segment active-segment">
+                    <circle cx="100" cy="100" r="80"
+                      fill="none"
+                      stroke="#4caf50"
+                      stroke-width="40"
+                      [attr.stroke-dasharray]="getPieSegment(analyticsData.featureMetrics.percentages.active) + ' ' + (100 - getPieSegment(analyticsData.featureMetrics.percentages.active))"
+                      stroke-dashoffset="25"
+                      class="pie-segment active-segment">
                     </circle>
-                    <circle cx="100" cy="100" r="80" 
-                            fill="none" 
-                            stroke="#f44336" 
-                            stroke-width="40"
-                            [attr.stroke-dasharray]="getPieSegment(analyticsData.featureMetrics.percentages.inactive) + ' ' + (100 - getPieSegment(analyticsData.featureMetrics.percentages.inactive))"
-                            [attr.stroke-dashoffset]="25 - getPieSegment(analyticsData.featureMetrics.percentages.active)"
-                            class="pie-segment inactive-segment">
+                    <circle cx="100" cy="100" r="80"
+                      fill="none"
+                      stroke="#f44336"
+                      stroke-width="40"
+                      [attr.stroke-dasharray]="getPieSegment(analyticsData.featureMetrics.percentages.inactive) + ' ' + (100 - getPieSegment(analyticsData.featureMetrics.percentages.inactive))"
+                      [attr.stroke-dashoffset]="25 - getPieSegment(analyticsData.featureMetrics.percentages.active)"
+                      class="pie-segment inactive-segment">
                     </circle>
-                    <circle cx="100" cy="100" r="80" 
-                            fill="none" 
-                            stroke="#ff9800" 
-                            stroke-width="40"
-                            [attr.stroke-dasharray]="getPieSegment(analyticsData.featureMetrics.percentages.scheduled) + ' ' + (100 - getPieSegment(analyticsData.featureMetrics.percentages.scheduled))"
-                            [attr.stroke-dashoffset]="25 - getPieSegment(analyticsData.featureMetrics.percentages.active) - getPieSegment(analyticsData.featureMetrics.percentages.inactive)"
-                            class="pie-segment scheduled-segment">
+                    <circle cx="100" cy="100" r="80"
+                      fill="none"
+                      stroke="#ff9800"
+                      stroke-width="40"
+                      [attr.stroke-dasharray]="getPieSegment(analyticsData.featureMetrics.percentages.scheduled) + ' ' + (100 - getPieSegment(analyticsData.featureMetrics.percentages.scheduled))"
+                      [attr.stroke-dashoffset]="25 - getPieSegment(analyticsData.featureMetrics.percentages.active) - getPieSegment(analyticsData.featureMetrics.percentages.inactive)"
+                      class="pie-segment scheduled-segment">
                     </circle>
                   </svg>
                 </div>
@@ -186,7 +185,7 @@ export interface AnalyticsData {
             </div>
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Tag Analytics -->
         <mat-card class="tag-analytics-card">
           <mat-card-header>
@@ -196,24 +195,28 @@ export interface AnalyticsData {
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <div *ngIf="analyticsData.tagAnalytics.length === 0" class="empty-state">
-              <mat-icon>info</mat-icon>
-              <p>No tags found</p>
-            </div>
-            
-            <div *ngFor="let tag of analyticsData.tagAnalytics" class="tag-metric">
-              <div class="tag-info">
-                <mat-chip>{{tag.tag}}</mat-chip>
-                <span class="tag-count">{{tag.count}} features</span>
+            @if (analyticsData.tagAnalytics.length === 0) {
+              <div class="empty-state">
+                <mat-icon>info</mat-icon>
+                <p>No tags found</p>
               </div>
-              <div class="tag-progress">
-                <mat-progress-bar mode="determinate" [value]="tag.percentage"></mat-progress-bar>
-                <span class="percentage">{{tag.percentage}}%</span>
+            }
+    
+            @for (tag of analyticsData.tagAnalytics; track tag) {
+              <div class="tag-metric">
+                <div class="tag-info">
+                  <mat-chip>{{tag.tag}}</mat-chip>
+                  <span class="tag-count">{{tag.count}} features</span>
+                </div>
+                <div class="tag-progress">
+                  <mat-progress-bar mode="determinate" [value]="tag.percentage"></mat-progress-bar>
+                  <span class="percentage">{{tag.percentage}}%</span>
+                </div>
               </div>
-            </div>
+            }
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Activity Metrics -->
         <mat-card class="activity-metrics-card">
           <mat-card-header>
@@ -233,7 +236,7 @@ export interface AnalyticsData {
                   <div class="activity-label">Recently Created</div>
                 </div>
               </div>
-              
+    
               <div class="activity-item">
                 <div class="activity-icon updated">
                   <mat-icon>edit</mat-icon>
@@ -243,7 +246,7 @@ export interface AnalyticsData {
                   <div class="activity-label">Recently Updated</div>
                 </div>
               </div>
-              
+    
               <div class="activity-item">
                 <div class="activity-icon scheduled">
                   <mat-icon>schedule</mat-icon>
@@ -253,7 +256,7 @@ export interface AnalyticsData {
                   <div class="activity-label">Upcoming Changes</div>
                 </div>
               </div>
-              
+    
               <div class="activity-item">
                 <div class="activity-icon expiring">
                   <mat-icon>warning</mat-icon>
@@ -266,7 +269,7 @@ export interface AnalyticsData {
             </div>
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Template Usage -->
         <mat-card class="template-usage-card">
           <mat-card-header>
@@ -276,24 +279,28 @@ export interface AnalyticsData {
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <div *ngIf="analyticsData.templateUsage.length === 0" class="empty-state">
-              <mat-icon>info</mat-icon>
-              <p>No template usage data</p>
-            </div>
-            
-            <div *ngFor="let template of analyticsData.templateUsage" class="template-metric">
-              <div class="template-info">
-                <span class="template-name">{{template.templateName}}</span>
-                <span class="template-usage">{{template.usage}} uses</span>
+            @if (analyticsData.templateUsage.length === 0) {
+              <div class="empty-state">
+                <mat-icon>info</mat-icon>
+                <p>No template usage data</p>
               </div>
-              <div class="template-progress">
-                <mat-progress-bar mode="determinate" [value]="template.percentage"></mat-progress-bar>
-                <span class="percentage">{{template.percentage}}%</span>
+            }
+    
+            @for (template of analyticsData.templateUsage; track template) {
+              <div class="template-metric">
+                <div class="template-info">
+                  <span class="template-name">{{template.templateName}}</span>
+                  <span class="template-usage">{{template.usage}} uses</span>
+                </div>
+                <div class="template-progress">
+                  <mat-progress-bar mode="determinate" [value]="template.percentage"></mat-progress-bar>
+                  <span class="percentage">{{template.percentage}}%</span>
+                </div>
               </div>
-            </div>
+            }
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Trend Analysis -->
         <mat-card class="trend-analysis-card">
           <mat-card-header>
@@ -314,7 +321,7 @@ export interface AnalyticsData {
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
-                  
+    
                   <!-- Sample trend line for active features -->
                   <polyline
                     points="0,150 50,140 100,120 150,110 200,100 250,90 300,85 350,80 400,75"
@@ -323,7 +330,7 @@ export interface AnalyticsData {
                     stroke-width="3"
                     class="trend-line active-trend">
                   </polyline>
-                  
+    
                   <!-- Sample trend line for inactive features -->
                   <polyline
                     points="0,80 50,85 100,90 150,95 200,100 250,105 300,110 350,115 400,120"
@@ -347,7 +354,7 @@ export interface AnalyticsData {
             </div>
           </mat-card-content>
         </mat-card>
-
+    
         <!-- Performance Insights -->
         <mat-card class="insights-card">
           <mat-card-header>
@@ -358,24 +365,28 @@ export interface AnalyticsData {
           </mat-card-header>
           <mat-card-content>
             <div class="insights-list">
-              <div class="insight-item" *ngFor="let insight of getInsights()">
-                <div class="insight-icon" [class]="insight.type">
-                  <mat-icon>{{insight.icon}}</mat-icon>
+              @for (insight of getInsights(); track insight) {
+                <div class="insight-item">
+                  <div class="insight-icon" [class]="insight.type">
+                    <mat-icon>{{insight.icon}}</mat-icon>
+                  </div>
+                  <div class="insight-content">
+                    <h4>{{insight.title}}</h4>
+                    <p>{{insight.description}}</p>
+                  </div>
+                  @if (insight.actionLabel) {
+                    <div class="insight-action">
+                      <button mat-button color="primary">{{insight.actionLabel}}</button>
+                    </div>
+                  }
                 </div>
-                <div class="insight-content">
-                  <h4>{{insight.title}}</h4>
-                  <p>{{insight.description}}</p>
-                </div>
-                <div class="insight-action" *ngIf="insight.actionLabel">
-                  <button mat-button color="primary">{{insight.actionLabel}}</button>
-                </div>
-              </div>
+              }
             </div>
           </mat-card-content>
         </mat-card>
       </div>
     </div>
-  `,
+    `,
   styles: [`
     .analytics-container {
       padding: 24px;

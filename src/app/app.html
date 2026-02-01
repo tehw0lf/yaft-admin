@@ -25,59 +25,68 @@
               </mat-select>
             </mat-form-field>
 
-            <div *ngIf="isApiProvider" class="form-section">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>API Base URL</mat-label>
-                <input matInput formControlName="apiUrl" placeholder="http://localhost:8080">
-                <mat-hint>Base URL of your YaFT Go backend API</mat-hint>
-              </mat-form-field>
+            @if (isApiProvider) {
+              <div class="form-section">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>API Base URL</mat-label>
+                  <input matInput formControlName="apiUrl" placeholder="http://localhost:8080">
+                  <mat-hint>Base URL of your YaFT Go backend API</mat-hint>
+                </mat-form-field>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Base UUID (Optional)</mat-label>
+                  <input matInput formControlName="baseUUID" placeholder="For collection-based management">
+                  <mat-hint>Leave empty for individual feature management</mat-hint>
+                </mat-form-field>
+                <div class="collection-secret-info">
+                  <mat-icon>info</mat-icon>
+                  <div>
+                    <p><strong>Collection Secret Management</strong></p>
+                    <ul>
+                      <li><strong>New Collection:</strong> Leave secret empty - one will be generated and cached</li>
+                      <li><strong>Existing Collection:</strong> Enter your collection secret to manage features</li>
+                    </ul>
+                  </div>
+                </div>
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Collection Secret (Optional)</mat-label>
+                  <input matInput type="password" formControlName="collectionSecret" placeholder="Required for existing collections">
+                  <mat-hint>Enter the secret if connecting to an existing collection, leave empty for new collections</mat-hint>
+                </mat-form-field>
+              </div>
+            }
 
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Base UUID (Optional)</mat-label>
-                <input matInput formControlName="baseUUID" placeholder="For collection-based management">
-                <mat-hint>Leave empty for individual feature management</mat-hint>
-              </mat-form-field>
-
-              <div class="collection-secret-info">
-                <mat-icon>info</mat-icon>
-                <div>
-                  <p><strong>Collection Secret Management</strong></p>
-                  <ul>
-                    <li><strong>New Collection:</strong> Leave secret empty - one will be generated and cached</li>
-                    <li><strong>Existing Collection:</strong> Enter your collection secret to manage features</li>
-                  </ul>
+            @if (!isApiProvider) {
+              <div class="form-section">
+                <div class="local-storage-info">
+                  <mat-icon>info</mat-icon>
+                  <div>
+                    <p><strong>Local Storage Mode</strong></p>
+                    <p>Features will be stored in your browser. You can import existing JSON configurations after connecting.</p>
+                  </div>
                 </div>
               </div>
-
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Collection Secret (Optional)</mat-label>
-                <input matInput type="password" formControlName="collectionSecret" placeholder="Required for existing collections">
-                <mat-hint>Enter the secret if connecting to an existing collection, leave empty for new collections</mat-hint>
-              </mat-form-field>
-            </div>
-
-            <div *ngIf="!isApiProvider" class="form-section">
-              <div class="local-storage-info">
-                <mat-icon>info</mat-icon>
-                <div>
-                  <p><strong>Local Storage Mode</strong></p>
-                  <p>Features will be stored in your browser. You can import existing JSON configurations after connecting.</p>
-                </div>
-              </div>
-            </div>
+            }
 
             <div class="actions">
-              <button mat-raised-button color="primary" type="submit" 
-                      [disabled]="connectionForm.invalid || isConnecting">
-                <mat-icon *ngIf="isConnecting">sync</mat-icon>
-                <span *ngIf="!isConnecting">Connect</span>
-                <span *ngIf="isConnecting">Connecting...</span>
+              <button mat-raised-button color="primary" type="submit"
+                [disabled]="connectionForm.invalid || isConnecting">
+                @if (isConnecting) {
+                  <mat-icon>sync</mat-icon>
+                }
+                @if (!isConnecting) {
+                  <span>Connect</span>
+                }
+                @if (isConnecting) {
+                  <span>Connecting...</span>
+                }
               </button>
-              
-              <mat-chip *ngIf="connectionStatus.isConnected" class="status-chip status-active">
-                <mat-icon>check_circle</mat-icon>
-                Connected
-              </mat-chip>
+
+              @if (connectionStatus.isConnected) {
+                <mat-chip class="status-chip status-active">
+                  <mat-icon>check_circle</mat-icon>
+                  Connected
+                </mat-chip>
+              }
             </div>
           </form>
         </mat-card-content>
@@ -87,406 +96,449 @@
     <!-- Features Management Step -->
     <mat-step [completed]="connectionStatus.isConnected">
       <ng-template matStepLabel>Feature Toggles</ng-template>
-      <div *ngIf="!connectionStatus.isConnected" class="not-connected">
-        <mat-card>
-          <mat-card-content>
-            <p>Please connect to a data source first to manage feature toggles.</p>
-            <button mat-button color="primary" (click)="stepper.previous()">Go Back</button>
-          </mat-card-content>
-        </mat-card>
-      </div>
+      @if (!connectionStatus.isConnected) {
+        <div class="not-connected">
+          <mat-card>
+            <mat-card-content>
+              <p>Please connect to a data source first to manage feature toggles.</p>
+              <button mat-button color="primary" (click)="stepper.previous()">Go Back</button>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
 
-      <div *ngIf="connectionStatus.isConnected">
-        <!-- Local Storage Import Guidance -->
-        <mat-card *ngIf="isLocalStorageProvider && features.length === 0" class="import-guidance-card">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>info</mat-icon>
-              Import Existing Features
-            </mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <p>You're connected to a local storage provider. To load existing features from your JSON configuration file:</p>
-            <ol>
-              <li>Use the <strong>Import</strong> button in the features section below</li>
-              <li>Select your JSON file (supports both boolean and feature object formats)</li>
-              <li>Your features will be imported and saved to browser storage</li>
-            </ol>
-            <p><em>Note: Changes made in this UI won't be written back to your original file due to browser security restrictions.</em></p>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Import/Export Actions with Drag & Drop -->
-        <mat-card class="actions-card" 
-                  appDragDrop 
-                  (filesDropped)="onFilesDropped($event)"
-                  (dragOver)="onDragOver($event)"
-                  [class.drag-over-active]="isDragOverActive">
-          <mat-card-header>
-            <mat-card-title>
-              <mat-icon>settings</mat-icon>
-              Manage Features
-            </mat-card-title>
-            <mat-card-subtitle *ngIf="!isDragOverActive">
-              Export, import, or drag & drop files to manage your features
-            </mat-card-subtitle>
-            <mat-card-subtitle *ngIf="isDragOverActive" class="drag-subtitle">
-              <mat-icon>upload</mat-icon>
-              Drop your JSON or CSV file here to import features
-            </mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <!-- Drag & Drop Overlay -->
-            <div *ngIf="isDragOverActive" class="drag-drop-overlay">
-              <div class="drag-drop-content">
-                <mat-icon class="drag-icon">cloud_upload</mat-icon>
-                <h3>Drop to Import Features</h3>
-                <p>Supports JSON and CSV files</p>
-              </div>
-            </div>
-
-            <div class="management-actions" [class.dragging]="isDragOverActive">
-              <!-- Export Actions -->
-              <button mat-raised-button [matMenuTriggerFor]="exportMenu" 
-                      [disabled]="features.length === 0 || isDragOverActive"
-                      color="primary">
-                <mat-icon>download</mat-icon>
-                Export Features
-              </button>
-              <mat-menu #exportMenu="matMenu">
-                <button mat-menu-item (click)="onExportJson()">
-                  <mat-icon>data_object</mat-icon>
-                  <span *ngIf="isBooleanProvider">Export as Boolean JSON</span>
-                  <span *ngIf="isFeatureObjectProvider">Export as Feature JSON</span>
-                </button>
-                <button mat-menu-item (click)="onExportCsv()">
-                  <mat-icon>table_chart</mat-icon>
-                  <span *ngIf="isBooleanProvider">Export as Boolean CSV</span>
-                  <span *ngIf="isFeatureObjectProvider">Export as Feature CSV</span>
-                </button>
-              </mat-menu>
-
-              <!-- Import Actions -->
-              <input type="file" #fileInput (change)="onImportFile($event)" 
-                     accept=".json,.csv" style="display: none;">
-              <button mat-raised-button (click)="fileInput.click()" 
-                      [disabled]="isDragOverActive">
-                <mat-icon>upload</mat-icon>
-                Import Features
-              </button>
-
-              <!-- Refresh Actions -->
-              <button mat-raised-button (click)="onRefresh()" 
-                      [disabled]="isLoading || isDragOverActive">
-                <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
-                Refresh Features
-              </button>
-            </div>
-
-            <!-- Drag & Drop Help Text -->
-            <div *ngIf="!isDragOverActive" class="drag-help-text">
-              <mat-icon class="help-icon">info</mat-icon>
-              <span>Tip: You can also drag and drop JSON or CSV files directly onto this area to import features</span>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Create Feature Form -->
-        <mat-card class="create-feature-card">
-          <mat-card-header>
-            <mat-card-title>
-              <span *ngIf="!isEditing && isBooleanProvider">Create New Boolean Toggle</span>
-              <span *ngIf="!isEditing && isFeatureObjectProvider">Create New Feature Toggle</span>
-              <span *ngIf="isEditing">Edit Feature: {{editingFeature?.key}}</span>
-            </mat-card-title>
-            <mat-card-subtitle *ngIf="isBooleanProvider">
-              Simple key-value boolean toggles only
-            </mat-card-subtitle>
-            <mat-card-subtitle *ngIf="isFeatureObjectProvider">
-              Advanced features with scheduling and metadata
-            </mat-card-subtitle>
-          </mat-card-header>
-          <mat-card-content>
-            <form [formGroup]="featureForm" (ngSubmit)="onCreateFeature()">
-              <!-- Basic fields for both types -->
-              <div class="form-row">
-                <mat-form-field appearance="outline">
-                  <mat-label>Feature Key</mat-label>
-                  <input matInput formControlName="key" placeholder="my-awesome-feature">
-                  <mat-error *ngIf="featureForm.get('key')?.hasError('required')">
-                    Feature key is required
-                  </mat-error>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline">
-                  <mat-label>{{isBooleanProvider ? 'Boolean Value' : 'Initial Value'}}</mat-label>
-                  <mat-select formControlName="value">
-                    <mat-option value="true">{{isBooleanProvider ? 'True' : 'Enabled'}}</mat-option>
-                    <mat-option value="false">{{isBooleanProvider ? 'False' : 'Disabled'}}</mat-option>
-                  </mat-select>
-                </mat-form-field>
-              </div>
-
-              <!-- Tags field (only for feature object providers) -->
-              <div *ngIf="isFeatureObjectProvider" class="form-row">
-                <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Tags</mat-label>
-                  <mat-chip-grid #tagChipGrid>
-                    <mat-chip-row
-                      *ngFor="let tag of getTags()"
-                      (removed)="removeTag(tag)"
-                      removable="true">
-                      {{tag}}
-                      <mat-icon matChipRemove>cancel</mat-icon>
-                    </mat-chip-row>
-                    <input 
-                      placeholder="Add tags..."
-                      [matChipInputFor]="tagChipGrid"
-                      [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
-                      [matChipInputAddOnBlur]="true"
-                      (matChipInputTokenEnd)="addTag($event)">
-                  </mat-chip-grid>
-                  <mat-hint>Press Enter or comma to add tags. Use lowercase, alphanumeric, and hyphens only.</mat-hint>
-                </mat-form-field>
-              </div>
-
-              <!-- Advanced fields only for feature object providers -->
-              <div *ngIf="isFeatureObjectProvider">
-                <div class="datetime-section">
-                  <h4>Schedule Feature Toggle</h4>
-                  <p class="datetime-hint">Set specific dates and times for automatic feature activation/deactivation</p>
-                </div>
-
-                <!-- Activate At DateTime -->
-                <div class="datetime-row">
-                  <mat-form-field appearance="outline" class="datetime-field">
-                    <mat-label>Activate Date & Time</mat-label>
-                    <input matInput formControlName="activeAt" type="datetime-local" placeholder="Select date and time">
-                    <mat-hint>Optional: When should this feature become active?</mat-hint>
-                  </mat-form-field>
-                </div>
-
-                <!-- Disable At DateTime -->
-                <div class="datetime-row">
-                  <mat-form-field appearance="outline" class="datetime-field">
-                    <mat-label>Disable Date & Time</mat-label>
-                    <input matInput formControlName="disabledAt" type="datetime-local" placeholder="Select date and time">
-                    <mat-hint>Optional: When should this feature be disabled?</mat-hint>
-                  </mat-form-field>
-                </div>
-
-                <div class="datetime-info">
+      @if (connectionStatus.isConnected) {
+        <div>
+          <!-- Local Storage Import Guidance -->
+          @if (isLocalStorageProvider && features.length === 0) {
+            <mat-card class="import-guidance-card">
+              <mat-card-header>
+                <mat-card-title>
                   <mat-icon>info</mat-icon>
-                  <span>Leave empty for immediate activation or manual control. Times are in your local timezone. Click the calendar icon to open the date/time picker.</span>
+                  Import Existing Features
+                </mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <p>You're connected to a local storage provider. To load existing features from your JSON configuration file:</p>
+                <ol>
+                  <li>Use the <strong>Import</strong> button in the features section below</li>
+                  <li>Select your JSON file (supports both boolean and feature object formats)</li>
+                  <li>Your features will be imported and saved to browser storage</li>
+                </ol>
+                <p><em>Note: Changes made in this UI won't be written back to your original file due to browser security restrictions.</em></p>
+              </mat-card-content>
+            </mat-card>
+          }
+          <!-- Import/Export Actions with Drag & Drop -->
+          <mat-card class="actions-card"
+            appDragDrop
+            (filesDropped)="onFilesDropped($event)"
+            (dragOver)="onDragOver($event)"
+            [class.drag-over-active]="isDragOverActive">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>settings</mat-icon>
+                Manage Features
+              </mat-card-title>
+              @if (!isDragOverActive) {
+                <mat-card-subtitle>
+                  Export, import, or drag & drop files to manage your features
+                </mat-card-subtitle>
+              }
+              @if (isDragOverActive) {
+                <mat-card-subtitle class="drag-subtitle">
+                  <mat-icon>upload</mat-icon>
+                  Drop your JSON or CSV file here to import features
+                </mat-card-subtitle>
+              }
+            </mat-card-header>
+            <mat-card-content>
+              <!-- Drag & Drop Overlay -->
+              @if (isDragOverActive) {
+                <div class="drag-drop-overlay">
+                  <div class="drag-drop-content">
+                    <mat-icon class="drag-icon">cloud_upload</mat-icon>
+                    <h3>Drop to Import Features</h3>
+                    <p>Supports JSON and CSV files</p>
+                  </div>
                 </div>
-              </div>
-
-
-              <!-- Form Validation Errors - only for feature object providers -->
-              <div *ngIf="timeRangeError && isFeatureObjectProvider" class="form-error">
-                <mat-icon>error</mat-icon>
-                <span>{{timeRangeError}}</span>
-              </div>
-
-              <div class="actions">
-                <button mat-raised-button color="primary" type="submit" 
-                        [disabled]="featureForm.invalid || isCreating">
-                  <mat-icon *ngIf="isCreating">sync</mat-icon>
-                  <span *ngIf="!isCreating && !isEditing">Create Feature</span>
-                  <span *ngIf="!isCreating && isEditing">Update Feature</span>
-                  <span *ngIf="isCreating && !isEditing">Creating...</span>
-                  <span *ngIf="isCreating && isEditing">Updating...</span>
-                </button>
-                
-                <button *ngIf="isEditing" mat-button type="button" (click)="onCancelEdit()">
-                  <mat-icon>cancel</mat-icon>
-                  Cancel Edit
-                </button>
-              </div>
-            </form>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Search and Filters -->
-        <app-feature-filters></app-feature-filters>
-
-        <!-- Bulk Actions Bar -->
-        <mat-card *ngIf="getSelectedCount() > 0" class="bulk-actions-card">
-          <mat-card-content>
-            <div class="bulk-actions-bar">
-              <div class="bulk-selection-info">
-                <mat-icon>check_box</mat-icon>
-                <span>{{getSelectedCount()}} feature(s) selected</span>
-                <button mat-button (click)="selectedFeatures.clear(); updateSelectionState()">
-                  Clear Selection
-                </button>
-              </div>
-              <div class="bulk-actions">
-                <button mat-raised-button color="primary" (click)="onBulkEnable()" 
-                        [disabled]="!canPerformBulkActions()">
-                  <mat-icon>toggle_on</mat-icon>
-                  Enable
-                </button>
-                <button mat-raised-button (click)="onBulkDisable()" 
-                        [disabled]="!canPerformBulkActions()">
-                  <mat-icon>toggle_off</mat-icon>
-                  Disable
-                </button>
-                <button mat-raised-button (click)="onBulkExport()">
+              }
+              <div class="management-actions" [class.dragging]="isDragOverActive">
+                <!-- Export Actions -->
+                <button mat-raised-button [matMenuTriggerFor]="exportMenu"
+                  [disabled]="features.length === 0 || isDragOverActive"
+                  color="primary">
                   <mat-icon>download</mat-icon>
-                  Export Selected
+                  Export Features
                 </button>
-                <button mat-raised-button color="warn" (click)="onBulkDelete()" 
-                        [disabled]="!canPerformBulkActions()">
-                  <mat-icon>delete</mat-icon>
-                  Delete
+                <mat-menu #exportMenu="matMenu">
+                  <button mat-menu-item (click)="onExportJson()">
+                    <mat-icon>data_object</mat-icon>
+                    @if (isBooleanProvider) {
+                      <span>Export as Boolean JSON</span>
+                    }
+                    @if (isFeatureObjectProvider) {
+                      <span>Export as Feature JSON</span>
+                    }
+                  </button>
+                  <button mat-menu-item (click)="onExportCsv()">
+                    <mat-icon>table_chart</mat-icon>
+                    @if (isBooleanProvider) {
+                      <span>Export as Boolean CSV</span>
+                    }
+                    @if (isFeatureObjectProvider) {
+                      <span>Export as Feature CSV</span>
+                    }
+                  </button>
+                </mat-menu>
+                <!-- Import Actions -->
+                <input type="file" #fileInput (change)="onImportFile($event)"
+                  accept=".json,.csv" style="display: none;">
+                <button mat-raised-button (click)="fileInput.click()"
+                  [disabled]="isDragOverActive">
+                  <mat-icon>upload</mat-icon>
+                  Import Features
+                </button>
+                <!-- Refresh Actions -->
+                <button mat-raised-button (click)="onRefresh()"
+                  [disabled]="isLoading || isDragOverActive">
+                  <mat-icon [class.spinning]="isLoading">refresh</mat-icon>
+                  Refresh Features
                 </button>
               </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
-
-        <!-- Features List -->
-        <mat-card class="features-list-card">
-          <mat-card-header>
-            <mat-card-title>Feature Toggles</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <div *ngIf="isLoading" class="loading-container">
-              <mat-spinner diameter="40"></mat-spinner>
-              <p>Loading features...</p>
-            </div>
-
-            <div *ngIf="!isLoading && features.length === 0" class="empty-state">
-              <mat-icon>toggle_off</mat-icon>
-              <p>No feature toggles found</p>
-              <p>Create your first feature toggle above</p>
-            </div>
-
-            <mat-table *ngIf="!isLoading && features.length > 0" [dataSource]="filteredFeatures.length > 0 ? filteredFeatures : features" class="features-table">
-              <!-- Selection Column -->
-              <ng-container matColumnDef="select">
-                <mat-header-cell *matHeaderCellDef>
-                  <mat-checkbox (change)="toggleAllSelection()"
-                                [checked]="isAllSelected"
-                                [indeterminate]="getSelectedCount() > 0 && !isAllSelected"
-                                matTooltip="Select all features with secrets">
-                  </mat-checkbox>
-                </mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <mat-checkbox *ngIf="canSelectFeature(feature)"
-                                [checked]="isFeatureSelected(feature)"
-                                (change)="toggleFeatureSelection(feature)">
-                  </mat-checkbox>
-                  <div *ngIf="!canSelectFeature(feature)" class="no-selection" 
-                       matTooltip="Feature cannot be selected (no secret)">
-                    <mat-icon>lock</mat-icon>
+              <!-- Drag & Drop Help Text -->
+              @if (!isDragOverActive) {
+                <div class="drag-help-text">
+                  <mat-icon class="help-icon">info</mat-icon>
+                  <span>Tip: You can also drag and drop JSON or CSV files directly onto this area to import features</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+          <!-- Create Feature Form -->
+          <mat-card class="create-feature-card">
+            <mat-card-header>
+              <mat-card-title>
+                @if (!isEditing && isBooleanProvider) {
+                  <span>Create New Boolean Toggle</span>
+                }
+                @if (!isEditing && isFeatureObjectProvider) {
+                  <span>Create New Feature Toggle</span>
+                }
+                @if (isEditing) {
+                  <span>Edit Feature: {{editingFeature?.key}}</span>
+                }
+              </mat-card-title>
+              @if (isBooleanProvider) {
+                <mat-card-subtitle>
+                  Simple key-value boolean toggles only
+                </mat-card-subtitle>
+              }
+              @if (isFeatureObjectProvider) {
+                <mat-card-subtitle>
+                  Advanced features with scheduling and metadata
+                </mat-card-subtitle>
+              }
+            </mat-card-header>
+            <mat-card-content>
+              <form [formGroup]="featureForm" (ngSubmit)="onCreateFeature()">
+                <!-- Basic fields for both types -->
+                <div class="form-row">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Feature Key</mat-label>
+                    <input matInput formControlName="key" placeholder="my-awesome-feature">
+                    @if (featureForm.get('key')?.hasError('required')) {
+                      <mat-error>
+                        Feature key is required
+                      </mat-error>
+                    }
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{isBooleanProvider ? 'Boolean Value' : 'Initial Value'}}</mat-label>
+                    <mat-select formControlName="value">
+                      <mat-option value="true">{{isBooleanProvider ? 'True' : 'Enabled'}}</mat-option>
+                      <mat-option value="false">{{isBooleanProvider ? 'False' : 'Disabled'}}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+                <!-- Tags field (only for feature object providers) -->
+                @if (isFeatureObjectProvider) {
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="full-width">
+                      <mat-label>Tags</mat-label>
+                      <mat-chip-grid #tagChipGrid>
+                        @for (tag of getTags(); track tag) {
+                          <mat-chip-row
+                            (removed)="removeTag(tag)"
+                            removable="true">
+                            {{tag}}
+                            <mat-icon matChipRemove>cancel</mat-icon>
+                          </mat-chip-row>
+                        }
+                        <input
+                          placeholder="Add tags..."
+                          [matChipInputFor]="tagChipGrid"
+                          [matChipInputSeparatorKeyCodes]="separatorKeysCodes"
+                          [matChipInputAddOnBlur]="true"
+                          (matChipInputTokenEnd)="addTag($event)">
+                      </mat-chip-grid>
+                      <mat-hint>Press Enter or comma to add tags. Use lowercase, alphanumeric, and hyphens only.</mat-hint>
+                    </mat-form-field>
                   </div>
-                </mat-cell>
-              </ng-container>
-
-              <ng-container matColumnDef="key">
-                <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <strong>{{feature.displayKey || feature.key}}</strong>
-                </mat-cell>
-              </ng-container>
-
-              <ng-container matColumnDef="status">
-                <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <mat-chip [class]="'status-chip status-' + getFeatureStatus(feature).status">
-                    {{getFeatureStatus(feature).status | titlecase}}
-                  </mat-chip>
-                </mat-cell>
-              </ng-container>
-
-              <ng-container matColumnDef="value">
-                <mat-header-cell *matHeaderCellDef>Value</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <mat-slide-toggle 
-                    [checked]="feature.value === 'true'"
-                    (change)="onToggleFeature(feature, $event.checked)"
-                    [disabled]="!hasSecret(feature)">
-                  </mat-slide-toggle>
-                  <span class="value-text">{{feature.value}}</span>
-                </mat-cell>
-              </ng-container>
-
-              <ng-container matColumnDef="tags">
-                <mat-header-cell *matHeaderCellDef>Tags</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <div class="tags-container" *ngIf="feature.tags && feature.tags.length > 0">
-                    <mat-chip *ngFor="let tag of feature.tags" class="tag-chip">
-                      {{tag}}
-                    </mat-chip>
+                }
+                <!-- Advanced fields only for feature object providers -->
+                @if (isFeatureObjectProvider) {
+                  <div>
+                    <div class="datetime-section">
+                      <h4>Schedule Feature Toggle</h4>
+                      <p class="datetime-hint">Set specific dates and times for automatic feature activation/deactivation</p>
+                    </div>
+                    <!-- Activate At DateTime -->
+                    <div class="datetime-row">
+                      <mat-form-field appearance="outline" class="datetime-field">
+                        <mat-label>Activate Date & Time</mat-label>
+                        <input matInput formControlName="activeAt" type="datetime-local" placeholder="Select date and time">
+                        <mat-hint>Optional: When should this feature become active?</mat-hint>
+                      </mat-form-field>
+                    </div>
+                    <!-- Disable At DateTime -->
+                    <div class="datetime-row">
+                      <mat-form-field appearance="outline" class="datetime-field">
+                        <mat-label>Disable Date & Time</mat-label>
+                        <input matInput formControlName="disabledAt" type="datetime-local" placeholder="Select date and time">
+                        <mat-hint>Optional: When should this feature be disabled?</mat-hint>
+                      </mat-form-field>
+                    </div>
+                    <div class="datetime-info">
+                      <mat-icon>info</mat-icon>
+                      <span>Leave empty for immediate activation or manual control. Times are in your local timezone. Click the calendar icon to open the date/time picker.</span>
+                    </div>
                   </div>
-                  <span *ngIf="!feature.tags || feature.tags.length === 0" class="no-tags">-</span>
-                </mat-cell>
-              </ng-container>
-
-              <ng-container matColumnDef="activeAt">
-                <mat-header-cell *matHeaderCellDef>Active At</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  {{feature.activeAt ? (feature.activeAt | date:'short') : '-'}}
-                </mat-cell>
-              </ng-container>
-
-              <ng-container matColumnDef="disabledAt">
-                <mat-header-cell *matHeaderCellDef>Disabled At</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  {{feature.disabledAt ? (feature.disabledAt | date:'short') : '-'}}
-                </mat-cell>
-              </ng-container>
-
-
-              <ng-container matColumnDef="actions">
-                <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
-                <mat-cell *matCellDef="let feature">
-                  <button mat-icon-button [matMenuTriggerFor]="featureMenu">
-                    <mat-icon>more_vert</mat-icon>
+                }
+                <!-- Form Validation Errors - only for feature object providers -->
+                @if (timeRangeError && isFeatureObjectProvider) {
+                  <div class="form-error">
+                    <mat-icon>error</mat-icon>
+                    <span>{{timeRangeError}}</span>
+                  </div>
+                }
+                <div class="actions">
+                  <button mat-raised-button color="primary" type="submit"
+                    [disabled]="featureForm.invalid || isCreating">
+                    @if (isCreating) {
+                      <mat-icon>sync</mat-icon>
+                    }
+                    @if (!isCreating && !isEditing) {
+                      <span>Create Feature</span>
+                    }
+                    @if (!isCreating && isEditing) {
+                      <span>Update Feature</span>
+                    }
+                    @if (isCreating && !isEditing) {
+                      <span>Creating...</span>
+                    }
+                    @if (isCreating && isEditing) {
+                      <span>Updating...</span>
+                    }
                   </button>
-                  <mat-menu #featureMenu="matMenu">
-                    <button mat-menu-item (click)="onEditFeature(feature)">
-                      <mat-icon>edit</mat-icon>
-                      Edit
+                  @if (isEditing) {
+                    <button mat-button type="button" (click)="onCancelEdit()">
+                      <mat-icon>cancel</mat-icon>
+                      Cancel Edit
                     </button>
-                    <button mat-menu-item (click)="onDeleteFeature(feature)" 
-                            [disabled]="!hasSecret(feature)">
+                  }
+                </div>
+              </form>
+            </mat-card-content>
+          </mat-card>
+          <!-- Search and Filters -->
+          <app-feature-filters></app-feature-filters>
+          <!-- Bulk Actions Bar -->
+          @if (getSelectedCount() > 0) {
+            <mat-card class="bulk-actions-card">
+              <mat-card-content>
+                <div class="bulk-actions-bar">
+                  <div class="bulk-selection-info">
+                    <mat-icon>check_box</mat-icon>
+                    <span>{{getSelectedCount()}} feature(s) selected</span>
+                    <button mat-button (click)="selectedFeatures.clear(); updateSelectionState()">
+                      Clear Selection
+                    </button>
+                  </div>
+                  <div class="bulk-actions">
+                    <button mat-raised-button color="primary" (click)="onBulkEnable()"
+                      [disabled]="!canPerformBulkActions()">
+                      <mat-icon>toggle_on</mat-icon>
+                      Enable
+                    </button>
+                    <button mat-raised-button (click)="onBulkDisable()"
+                      [disabled]="!canPerformBulkActions()">
+                      <mat-icon>toggle_off</mat-icon>
+                      Disable
+                    </button>
+                    <button mat-raised-button (click)="onBulkExport()">
+                      <mat-icon>download</mat-icon>
+                      Export Selected
+                    </button>
+                    <button mat-raised-button color="warn" (click)="onBulkDelete()"
+                      [disabled]="!canPerformBulkActions()">
                       <mat-icon>delete</mat-icon>
                       Delete
                     </button>
-                    <button mat-menu-item (click)="onCopySecret(feature)" 
-                            [disabled]="!hasSecret(feature)">
-                      <mat-icon>key</mat-icon>
-                      Copy Secret
-                    </button>
-                  </mat-menu>
-                </mat-cell>
-              </ng-container>
-
-              <mat-header-row *matHeaderRowDef="currentDisplayedColumns"></mat-header-row>
-              <mat-row *matRowDef="let row; columns: currentDisplayedColumns;"></mat-row>
-            </mat-table>
-          </mat-card-content>
-        </mat-card>
-      </div>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+          <!-- Features List -->
+          <mat-card class="features-list-card">
+            <mat-card-header>
+              <mat-card-title>Feature Toggles</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              @if (isLoading) {
+                <div class="loading-container">
+                  <mat-spinner diameter="40"></mat-spinner>
+                  <p>Loading features...</p>
+                </div>
+              }
+              @if (!isLoading && features.length === 0) {
+                <div class="empty-state">
+                  <mat-icon>toggle_off</mat-icon>
+                  <p>No feature toggles found</p>
+                  <p>Create your first feature toggle above</p>
+                </div>
+              }
+              @if (!isLoading && features.length > 0) {
+                <mat-table [dataSource]="filteredFeatures.length > 0 ? filteredFeatures : features" class="features-table">
+                  <!-- Selection Column -->
+                  <ng-container matColumnDef="select">
+                    <mat-header-cell *matHeaderCellDef>
+                      <mat-checkbox (change)="toggleAllSelection()"
+                        [checked]="isAllSelected"
+                        [indeterminate]="getSelectedCount() > 0 && !isAllSelected"
+                        matTooltip="Select all features with secrets">
+                      </mat-checkbox>
+                    </mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      @if (canSelectFeature(feature)) {
+                        <mat-checkbox
+                          [checked]="isFeatureSelected(feature)"
+                          (change)="toggleFeatureSelection(feature)">
+                        </mat-checkbox>
+                      }
+                      @if (!canSelectFeature(feature)) {
+                        <div class="no-selection"
+                          matTooltip="Feature cannot be selected (no secret)">
+                          <mat-icon>lock</mat-icon>
+                        </div>
+                      }
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="key">
+                    <mat-header-cell *matHeaderCellDef>Key</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      <strong>{{feature.displayKey || feature.key}}</strong>
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="status">
+                    <mat-header-cell *matHeaderCellDef>Status</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      <mat-chip [class]="'status-chip status-' + getFeatureStatus(feature).status">
+                        {{getFeatureStatus(feature).status | titlecase}}
+                      </mat-chip>
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="value">
+                    <mat-header-cell *matHeaderCellDef>Value</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      <mat-slide-toggle
+                        [checked]="feature.value === 'true'"
+                        (change)="onToggleFeature(feature, $event.checked)"
+                        [disabled]="!hasSecret(feature)">
+                      </mat-slide-toggle>
+                      <span class="value-text">{{feature.value}}</span>
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="tags">
+                    <mat-header-cell *matHeaderCellDef>Tags</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      @if (feature.tags && feature.tags.length > 0) {
+                        <div class="tags-container">
+                          @for (tag of feature.tags; track tag) {
+                            <mat-chip class="tag-chip">
+                              {{tag}}
+                            </mat-chip>
+                          }
+                        </div>
+                      }
+                      @if (!feature.tags || feature.tags.length === 0) {
+                        <span class="no-tags">-</span>
+                      }
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="activeAt">
+                    <mat-header-cell *matHeaderCellDef>Active At</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      {{feature.activeAt ? (feature.activeAt | date:'short') : '-'}}
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="disabledAt">
+                    <mat-header-cell *matHeaderCellDef>Disabled At</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      {{feature.disabledAt ? (feature.disabledAt | date:'short') : '-'}}
+                    </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="actions">
+                    <mat-header-cell *matHeaderCellDef>Actions</mat-header-cell>
+                    <mat-cell *matCellDef="let feature">
+                      <button mat-icon-button [matMenuTriggerFor]="featureMenu">
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #featureMenu="matMenu">
+                        <button mat-menu-item (click)="onEditFeature(feature)">
+                          <mat-icon>edit</mat-icon>
+                          Edit
+                        </button>
+                        <button mat-menu-item (click)="onDeleteFeature(feature)"
+                          [disabled]="!hasSecret(feature)">
+                          <mat-icon>delete</mat-icon>
+                          Delete
+                        </button>
+                        <button mat-menu-item (click)="onCopySecret(feature)"
+                          [disabled]="!hasSecret(feature)">
+                          <mat-icon>key</mat-icon>
+                          Copy Secret
+                        </button>
+                      </mat-menu>
+                    </mat-cell>
+                  </ng-container>
+                  <mat-header-row *matHeaderRowDef="currentDisplayedColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: currentDisplayedColumns;"></mat-row>
+                </mat-table>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
     </mat-step>
   </mat-stepper>
 </div>
 
 <!-- Alerts -->
-<div *ngIf="alertMessage" class="alert-container">
-  <mat-card [class]="'alert-card alert-' + alertType">
-    <mat-card-content>
-      <div class="alert-content">
-        <mat-icon>{{alertType === 'success' ? 'check_circle' : 'error'}}</mat-icon>
-        <span>{{alertMessage}}</span>
-        <button mat-icon-button (click)="clearAlert()">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
-</div>
+@if (alertMessage) {
+  <div class="alert-container">
+    <mat-card [class]="'alert-card alert-' + alertType">
+      <mat-card-content>
+        <div class="alert-content">
+          <mat-icon>{{alertType === 'success' ? 'check_circle' : 'error'}}</mat-icon>
+          <span>{{alertMessage}}</span>
+          <button mat-icon-button (click)="clearAlert()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+}
 

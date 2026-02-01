@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { Subject, takeUntil, debounceTime } from 'rxjs';
 
 // Angular Material Imports
@@ -22,7 +22,6 @@ import { FeatureFilter } from '../../models/feature.model';
   selector: 'app-feature-filters',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -33,7 +32,7 @@ import { FeatureFilter } from '../../models/feature.model';
     MatDatepickerModule,
     MatNativeDateModule,
     MatCardModule
-  ],
+],
   template: `
     <mat-card class="filter-card">
       <mat-card-header>
@@ -42,9 +41,9 @@ import { FeatureFilter } from '../../models/feature.model';
           Filters & Search
         </mat-card-title>
         <div class="header-actions">
-          <button mat-icon-button (click)="clearFilters()" 
-                  [disabled]="!hasActiveFilters()"
-                  matTooltip="Clear all filters">
+          <button mat-icon-button (click)="clearFilters()"
+            [disabled]="!hasActiveFilters()"
+            matTooltip="Clear all filters">
             <mat-icon>clear</mat-icon>
           </button>
         </div>
@@ -55,16 +54,17 @@ import { FeatureFilter } from '../../models/feature.model';
             <!-- Search Input -->
             <mat-form-field appearance="outline" class="search-field">
               <mat-label>Search Features</mat-label>
-              <input matInput formControlName="searchText" 
-                     placeholder="Search by key...">
+              <input matInput formControlName="searchText"
+                placeholder="Search by key...">
               <mat-icon matPrefix>search</mat-icon>
-              <button mat-icon-button matSuffix 
-                      *ngIf="filterForm.get('searchText')?.value"
-                      (click)="clearSearch()">
-                <mat-icon>close</mat-icon>
-              </button>
+              @if (filterForm.get('searchText')?.value) {
+                <button mat-icon-button matSuffix
+                  (click)="clearSearch()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
             </mat-form-field>
-
+    
             <!-- Status Filter -->
             <mat-form-field appearance="outline">
               <mat-label>Status</mat-label>
@@ -76,35 +76,37 @@ import { FeatureFilter } from '../../models/feature.model';
               <mat-hint>Filter by feature status</mat-hint>
             </mat-form-field>
           </div>
-
+    
           <!-- Tags Filter Row -->
           <div class="filter-row tags-filter-row">
             <mat-form-field appearance="outline" class="tags-filter-field">
               <mat-label>Filter by Tags</mat-label>
               <mat-select formControlName="tags" multiple>
-                <mat-option *ngFor="let tag of availableTags" [value]="tag">
-                  {{tag}}
-                </mat-option>
+                @for (tag of availableTags; track tag) {
+                  <mat-option [value]="tag">
+                    {{tag}}
+                  </mat-option>
+                }
               </mat-select>
               <mat-hint>Select tags to filter features</mat-hint>
             </mat-form-field>
           </div>
-
+    
           <div class="filter-row">
             <!-- Date Range -->
             <div class="date-range-container">
               <mat-form-field appearance="outline">
                 <mat-label>Start Date</mat-label>
-                <input matInput [matDatepicker]="startPicker" 
-                       formControlName="dateStart">
+                <input matInput [matDatepicker]="startPicker"
+                  formControlName="dateStart">
                 <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
                 <mat-datepicker #startPicker></mat-datepicker>
               </mat-form-field>
-
+    
               <mat-form-field appearance="outline">
                 <mat-label>End Date</mat-label>
-                <input matInput [matDatepicker]="endPicker" 
-                       formControlName="dateEnd">
+                <input matInput [matDatepicker]="endPicker"
+                  formControlName="dateEnd">
                 <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
                 <mat-datepicker #endPicker></mat-datepicker>
               </mat-form-field>
@@ -113,7 +115,7 @@ import { FeatureFilter } from '../../models/feature.model';
         </form>
       </mat-card-content>
     </mat-card>
-  `,
+    `,
   styles: [`
     .filter-card {
       margin-bottom: 16px;

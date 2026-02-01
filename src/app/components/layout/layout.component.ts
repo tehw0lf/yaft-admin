@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 
 // Angular Material Imports
@@ -15,7 +15,6 @@ import { MatMenuModule } from '@angular/material/menu';
   selector: 'app-layout',
   standalone: true,
   imports: [
-    CommonModule,
     RouterModule,
     MatToolbarModule,
     MatSidenavModule,
@@ -24,7 +23,7 @@ import { MatMenuModule } from '@angular/material/menu';
     MatButtonModule,
     MatTooltipModule,
     MatMenuModule
-  ],
+],
   template: `
     <div class="layout-container">
       <mat-toolbar color="primary" class="main-toolbar">
