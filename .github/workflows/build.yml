@@ -19,6 +19,7 @@ jobs:
             security-events: write
         with:
             tool: "npm"
+            lint: "run lint"
             test: "run test:ci"
             build_branch: "run affected:build"
             build_main: "run build --skip-nx-cache"
