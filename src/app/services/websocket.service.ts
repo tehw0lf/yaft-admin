@@ -1,13 +1,17 @@
-import { Injectable, OnDestroy } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, timer, EMPTY } from 'rxjs';
+import { Injectable, OnDestroy, inject } from '@angular/core';
+import { BehaviorSubject, Subject, timer, EMPTY } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
-import { takeUntil, retry, catchError, tap, delayWhen } from 'rxjs/operators';
+import { takeUntil, retry, catchError } from 'rxjs/operators';
 import { ErrorHandlerService } from './error-handler.service';
 import { Feature } from '../models/feature.model';
 
+export interface HeartbeatData {
+  timestamp: number;
+}
+
 export interface WebSocketMessage {
   type: 'feature_update' | 'feature_create' | 'feature_delete' | 'connection_status' | 'heartbeat';
-  data: any;
+  data: FeatureUpdateMessage | HeartbeatData;
   timestamp: string;
   userId?: string;
 }
@@ -30,6 +34,8 @@ export interface ConnectionStatus {
   providedIn: 'root'
 })
 export class WebSocketService implements OnDestroy {
+  private errorHandler = inject(ErrorHandlerService);
+
   private destroy$ = new Subject<void>();
   private socket$?: WebSocketSubject<WebSocketMessage>;
   private isConnectedSubject = new BehaviorSubject<ConnectionStatus>({
@@ -52,7 +58,7 @@ export class WebSocketService implements OnDestroy {
   public featureUpdates$ = this.featureUpdatesSubject.asObservable();
   public heartbeat$ = this.heartbeatSubject.asObservable();
   
-  constructor(private errorHandler: ErrorHandlerService) {
+  constructor() {
     this.setupHeartbeat();
   }
 
@@ -190,28 +196,38 @@ export class WebSocketService implements OnDestroy {
     }
   }
 
+  private isFeatureUpdateMessage(data: FeatureUpdateMessage | HeartbeatData): data is FeatureUpdateMessage {
+    return 'feature' in data && 'action' in data;
+  }
+
   private handleMessage(message: WebSocketMessage): void {
     switch (message.type) {
       case 'feature_update':
-        this.handleFeatureUpdate(message.data);
+        if (this.isFeatureUpdateMessage(message.data)) {
+          this.handleFeatureUpdate(message.data);
+        }
         break;
-      
+
       case 'feature_create':
-        this.handleFeatureUpdate({ ...message.data, action: 'create' });
+        if (this.isFeatureUpdateMessage(message.data)) {
+          this.handleFeatureUpdate({ ...message.data, action: 'create' });
+        }
         break;
-      
+
       case 'feature_delete':
-        this.handleFeatureUpdate({ ...message.data, action: 'delete' });
+        if (this.isFeatureUpdateMessage(message.data)) {
+          this.handleFeatureUpdate({ ...message.data, action: 'delete' });
+        }
         break;
-      
+
       case 'heartbeat':
         this.handleHeartbeat();
         break;
-      
+
       case 'connection_status':
         console.log('Connection status update:', message.data);
         break;
-      
+
       default:
         console.log('Unknown message type:', message.type);
     }

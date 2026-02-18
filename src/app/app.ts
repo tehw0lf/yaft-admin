@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatStepper } from '@angular/material/stepper';
 import { RouterModule } from '@angular/router';
@@ -76,6 +76,14 @@ import {
   styleUrl: './app.scss',
 })
 export class App implements OnInit, OnDestroy {
+  private fb = inject(FormBuilder);
+  private yaftService = inject(YaftProviderService);
+  private snackBar = inject(MatSnackBar);
+  private filterService = inject(FilterService);
+  private exportService = inject(ExportService);
+  private errorHandler = inject(ErrorHandlerService);
+  private bulkOperationsService = inject(BulkOperationsService);
+
   @ViewChild('stepper') stepper!: MatStepper;
   private destroy$ = new Subject<void>();
 
@@ -120,15 +128,7 @@ export class App implements OnInit, OnDestroy {
   // Chip input configuration
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
 
-  constructor(
-    private fb: FormBuilder,
-    private yaftService: YaftProviderService,
-    private snackBar: MatSnackBar,
-    private filterService: FilterService,
-    private exportService: ExportService,
-    private errorHandler: ErrorHandlerService,
-    private bulkOperationsService: BulkOperationsService
-  ) {
+  constructor() {
     this.connectionForm = this.createConnectionForm();
     this.featureForm = this.createFeatureForm();
   }
@@ -249,9 +249,7 @@ export class App implements OnInit, OnDestroy {
            this.connectionStatus.type === ProviderType.LOCAL_STORAGE;
   }
 
-  onProviderTypeChange(event: any) {
-    const providerType = event.value as ProviderType;
-    
+  onProviderTypeChange(_event: { value: ProviderType }) {
     if (this.isApiProvider) {
       this.connectionForm.get('apiUrl')?.setValidators([Validators.required]);
       this.connectionForm.get('configPath')?.clearValidators();
@@ -352,7 +350,7 @@ export class App implements OnInit, OnDestroy {
               duration: 10000,
               panelClass: ['secret-snackbar']
             }).onAction().subscribe(() => {
-              this.copyToClipboard(newFeature.secret!);
+              this.copyToClipboard(newFeature.secret ?? '');
             });
           }
         },
@@ -386,10 +384,10 @@ export class App implements OnInit, OnDestroy {
     this.yaftService.updateFeature(this.editingFeature.key, updates, this.editingFeature.secret)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (updatedFeature) => {
+        next: () => {
           this.isCreating = false;
-          this.showAlert(`Feature '${this.editingFeature!.key}' updated successfully`, 'success');
-          
+          this.showAlert(`Feature '${this.editingFeature?.key}' updated successfully`, 'success');
+
           // Exit edit mode and reset form
           this.onCancelEdit();
           this.onRefresh();
@@ -431,7 +429,7 @@ export class App implements OnInit, OnDestroy {
     this.yaftService.updateFeature(feature.key, updates, feature.secret)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (updatedFeature) => {
+        next: () => {
           this.showAlert(`Feature '${feature.key}' ${enabled ? 'enabled' : 'disabled'}`, 'success');
           this.onRefresh();
           
@@ -511,7 +509,7 @@ export class App implements OnInit, OnDestroy {
     const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
     const exportData = this.formatFeaturesForExport(features);
     
-    if (this.isBooleanProvider) {
+    if (this.isBooleanProvider && !Array.isArray(exportData)) {
       this.exportService.exportBooleanJson(exportData);
     } else {
       this.exportService.exportToJson(features);
@@ -532,7 +530,7 @@ export class App implements OnInit, OnDestroy {
     this.errorHandler.showSuccessNotification(`Exported ${features.length} features to CSV`);
   }
 
-  private formatFeaturesForExport(features: Feature[]): any {
+  private formatFeaturesForExport(features: Feature[]): Record<string, boolean> | Feature[] {
     if (this.isBooleanProvider) {
       // For boolean providers, export as simple key-value object
       const booleanData: Record<string, boolean> = {};

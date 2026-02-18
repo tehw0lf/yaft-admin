@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
@@ -23,11 +23,10 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { TemplateService } from '../../services/template.service';
 import { YaftProviderService } from '../../services/yaft-provider.service';
 import { ErrorHandlerService } from '../../services/error-handler.service';
-import { 
-  FeatureTemplate, 
-  TemplateCategory, 
-  TemplateVariable, 
-  TemplateUsage 
+import {
+  FeatureTemplate,
+  TemplateCategory,
+  TemplateUsage
 } from '../../models/template.model';
 
 @Component({
@@ -97,7 +96,11 @@ import {
                     @for (template of mostUsedTemplates; track template) {
                       <div
                         class="template-card quick-template"
-                        (click)="useTemplate(template)">
+                        tabindex="0"
+                        role="button"
+                        (click)="useTemplate(template)"
+                        (keyup.enter)="useTemplate(template)"
+                        (keyup.space)="useTemplate(template)">
                         <div class="template-icon">
                           <mat-icon>{{template.icon}}</mat-icon>
                         </div>
@@ -645,6 +648,12 @@ import {
   `]
 })
 export class TemplatesComponent implements OnInit, OnDestroy {
+  private fb = inject(FormBuilder);
+  private templateService = inject(TemplateService);
+  private yaftService = inject(YaftProviderService);
+  private errorHandler = inject(ErrorHandlerService);
+  private dialog = inject(MatDialog);
+
   private destroy$ = new Subject<void>();
   
   categories: TemplateCategory[] = [];
@@ -653,13 +662,7 @@ export class TemplatesComponent implements OnInit, OnDestroy {
   
   createTemplateForm: FormGroup;
 
-  constructor(
-    private fb: FormBuilder,
-    private templateService: TemplateService,
-    private yaftService: YaftProviderService,
-    private errorHandler: ErrorHandlerService,
-    private dialog: MatDialog
-  ) {
+  constructor() {
     this.createTemplateForm = this.createForm();
   }
 
@@ -696,14 +699,12 @@ export class TemplatesComponent implements OnInit, OnDestroy {
   }
 
   duplicateTemplate(template: FeatureTemplate): void {
+    const { id: _id, createdAt: _createdAt, usageCount: _usageCount, isBuiltIn: _isBuiltIn, ...rest } = template;
     const duplicate = {
-      ...template,
+      ...rest,
       name: `${template.name} (Copy)`,
-      isBuiltIn: false
+      isBuiltIn: false as const
     };
-    delete (duplicate as any).id;
-    delete (duplicate as any).createdAt;
-    delete (duplicate as any).usageCount;
     
     this.templateService.createTemplate(duplicate)
       .pipe(takeUntil(this.destroy$))

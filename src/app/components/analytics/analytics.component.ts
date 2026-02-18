@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 
@@ -18,6 +18,15 @@ import { MatChipsModule } from '@angular/material/chips';
 import { YaftProviderService } from '../../services/yaft-provider.service';
 import { TemplateService } from '../../services/template.service';
 import { Feature } from '../../models/feature.model';
+import { FeatureTemplate, TemplateUsage } from '../../models/template.model';
+
+export interface Insight {
+  type: 'success' | 'warning' | 'info';
+  icon: string;
+  title: string;
+  description: string;
+  actionLabel: string | null;
+}
 
 export interface AnalyticsData {
   featureMetrics: {
@@ -794,6 +803,9 @@ export interface AnalyticsData {
   `]
 })
 export class AnalyticsComponent implements OnInit, OnDestroy {
+  private yaftService = inject(YaftProviderService);
+  private templateService = inject(TemplateService);
+
   private destroy$ = new Subject<void>();
   
   selectedTimeRange = '30d';
@@ -817,11 +829,6 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     timeSeriesData: [],
     templateUsage: []
   };
-
-  constructor(
-    private yaftService: YaftProviderService,
-    private templateService: TemplateService
-  ) {}
 
   ngOnInit(): void {
     this.loadAnalyticsData();
@@ -847,7 +854,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
       });
   }
 
-  private calculateAnalytics(features: Feature[], templates: any[], usageHistory: any[]): void {
+  private calculateAnalytics(features: Feature[], templates: FeatureTemplate[], _usageHistory: TemplateUsage[]): void {
     // Feature metrics
     const total = features.length;
     let active = 0;
@@ -880,7 +887,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     
     // Activity metrics (simulated based on current data)
     const now = new Date();
-    const recentThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
+    const _recentThreshold = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 days ago
     
     this.analyticsData.activityMetrics = {
       recentCreated: Math.min(features.length, 5), // Simulate recent creation
@@ -926,7 +933,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     return (percentage / 100) * 251.2; // 2 * π * 40 (circumference)
   }
 
-  getInsights(): any[] {
+  getInsights(): Insight[] {
     const insights = [];
     
     if (this.analyticsData.featureMetrics.active > this.analyticsData.featureMetrics.inactive) {

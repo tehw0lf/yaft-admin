@@ -1,10 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { 
-  FeatureTemplate, 
-  TemplateCategory, 
-  TemplateUsage, 
-  TemplateVariable,
+import {
+  FeatureTemplate,
+  TemplateCategory,
+  TemplateUsage,
   BUILT_IN_TEMPLATES,
   TEMPLATE_CATEGORIES
 } from '../models/template.model';
@@ -15,13 +14,15 @@ import { ErrorHandlerService } from './error-handler.service';
   providedIn: 'root'
 })
 export class TemplateService {
+  private errorHandler = inject(ErrorHandlerService);
+
   private templatesSubject = new BehaviorSubject<FeatureTemplate[]>([]);
   private usageHistorySubject = new BehaviorSubject<TemplateUsage[]>([]);
   
   public templates$ = this.templatesSubject.asObservable();
   public usageHistory$ = this.usageHistorySubject.asObservable();
 
-  constructor(private errorHandler: ErrorHandlerService) {
+  constructor() {
     this.initializeTemplates();
     this.loadUsageHistory();
   }
@@ -157,7 +158,7 @@ export class TemplateService {
   // Create feature from template
   createFeatureFromTemplate(
     templateId: string, 
-    variables: { [key: string]: any }
+    variables: { [key: string]: string | number | boolean }
   ): Feature {
     const template = this.getTemplate(templateId);
     if (!template) {
@@ -166,14 +167,13 @@ export class TemplateService {
 
     // Process template variables
     const processedKey = this.processTemplate(template.keyTemplate, variables);
-    const processedTags = template.tags.map(tag => this.processTemplate(tag, variables));
 
     // Create feature object
     const feature: Feature = {
       key: processedKey,
       value: template.value,
-      activeAt: variables.activation_date ? new Date(variables.activation_date).toISOString() : template.activeAt,
-      disabledAt: variables.maintenance_end ? new Date(variables.maintenance_end).toISOString() : template.disabledAt
+      activeAt: variables['activation_date'] ? new Date(String(variables['activation_date'])).toISOString() : template.activeAt,
+      disabledAt: variables['maintenance_end'] ? new Date(String(variables['maintenance_end'])).toISOString() : template.disabledAt
     };
 
     // Record usage
@@ -186,7 +186,7 @@ export class TemplateService {
   }
 
   // Process template string with variables
-  private processTemplate(template: string, variables: { [key: string]: any }): string {
+  private processTemplate(template: string, variables: { [key: string]: string | number | boolean }): string {
     let result = template;
 
     // Replace {{variable}} patterns
@@ -200,7 +200,7 @@ export class TemplateService {
   }
 
   // Validate template variables
-  validateTemplateVariables(template: FeatureTemplate, variables: { [key: string]: any }): {
+  validateTemplateVariables(template: FeatureTemplate, variables: { [key: string]: string | number | boolean }): {
     isValid: boolean;
     errors: string[];
   } {
@@ -233,21 +233,21 @@ export class TemplateService {
           break;
         
         case 'date':
-          if (!Date.parse(value)) {
+          if (!Date.parse(String(value))) {
             errors.push(`${variable.description} must be a valid date`);
           }
           break;
-        
+
         case 'select':
-          if (variable.options && !variable.options.includes(value)) {
+          if (variable.options && !variable.options.includes(String(value))) {
             errors.push(`${variable.description} must be one of: ${variable.options.join(', ')}`);
           }
           break;
-        
+
         case 'text':
           if (variable.pattern) {
             try {
-              if (!new RegExp(variable.pattern).test(value)) {
+              if (!new RegExp(variable.pattern).test(String(value))) {
                 errors.push(`${variable.description} format is invalid`);
               }
             } catch {
@@ -265,7 +265,7 @@ export class TemplateService {
   }
 
   // Record template usage
-  private recordTemplateUsage(templateId: string, featureKey: string, variables: { [key: string]: any }): void {
+  private recordTemplateUsage(templateId: string, featureKey: string, variables: { [key: string]: string | number | boolean }): void {
     const usage: TemplateUsage = {
       templateId,
       featureKey,
@@ -300,14 +300,14 @@ export class TemplateService {
   }
 
   // Get most used templates
-  getMostUsedTemplates(limit: number = 5): FeatureTemplate[] {
+  getMostUsedTemplates(limit = 5): FeatureTemplate[] {
     return [...this.templatesSubject.value]
       .sort((a, b) => b.usageCount - a.usageCount)
       .slice(0, limit);
   }
 
   // Get recent template usage
-  getRecentUsage(limit: number = 10): TemplateUsage[] {
+  getRecentUsage(limit = 10): TemplateUsage[] {
     return this.usageHistorySubject.value.slice(0, limit);
   }
 
@@ -348,7 +348,7 @@ export class TemplateService {
         throw new Error('Invalid template file format');
       }
 
-      const importedTemplates = data.templates.map((t: any) => ({
+      const importedTemplates = data.templates.map((t: Partial<FeatureTemplate>) => ({
         ...t,
         id: this.generateTemplateId(), // Generate new IDs to avoid conflicts
         isBuiltIn: false,

@@ -125,7 +125,7 @@ describe('YaftProviderService', () => {
         baseUUID: 'test-uuid',
         isConnected: true,
       };
-      (service as any).connectionSubject.next(connection);
+      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
     });
     it('should load features from API service', (done) => {
       const mockFeatures: Feature[] = [
@@ -158,7 +158,7 @@ describe('YaftProviderService', () => {
         type: ProviderType.LOCAL_STORAGE,
         isConnected: true,
       };
-      (service as any).connectionSubject.next(connection);
+      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
       service.loadFeatures().subscribe((features) => {
         expect(features).toHaveLength(2);
         expect(features[0].key).toBe('feature1');
@@ -175,7 +175,7 @@ describe('YaftProviderService', () => {
         baseUUID: 'test-uuid',
         isConnected: true,
       };
-      (service as any).connectionSubject.next(connection);
+      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
       service.setCollectionSecret('test-secret');
     });
     it('should create feature via API', (done) => {
@@ -235,7 +235,7 @@ describe('YaftProviderService', () => {
         type: ProviderType.LOCAL_STORAGE,
         isConnected: true,
       };
-      (service as any).connectionSubject.next(connection);
+      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
       const feature: Omit<Feature, 'secret'> = {
         key: 'local-feature',
         value: 'true',
@@ -254,7 +254,7 @@ describe('YaftProviderService', () => {
               const stored = localStorage.getItem('yaft-admin-features');
               const features = stored ? JSON.parse(stored) : [];
               expect(
-                features.find((f: any) => f.key === 'local-feature')
+                features.find((f: Feature) => f.key === 'local-feature')
               ).toBeUndefined();
               expect(step).toBe(2);
               done();
@@ -318,21 +318,21 @@ describe('YaftProviderService', () => {
   });
   describe('Utility Methods', () => {
     it('should extract display key from full key', () => {
-      const service_any = service as any;
-      expect(service_any.extractDisplayKey('uuid|feature-name')).toBe(
+      const servicePrivate = service as unknown as { extractDisplayKey: (key: string | undefined) => string };
+      expect(servicePrivate.extractDisplayKey('uuid|feature-name')).toBe(
         'feature-name'
       );
-      expect(service_any.extractDisplayKey('simple-key')).toBe('simple-key');
-      expect(service_any.extractDisplayKey(undefined)).toBe('unknown-feature');
+      expect(servicePrivate.extractDisplayKey('simple-key')).toBe('simple-key');
+      expect(servicePrivate.extractDisplayKey(undefined)).toBe('unknown-feature');
     });
     it('should convert object to features array', () => {
-      const service_any = service as any;
-      const data = {
+      const servicePrivate = service as unknown as { convertObjectToFeatures: (data: Record<string, unknown>) => Feature[] };
+      const data: Record<string, unknown> = {
         toggle1: true,
         toggle2: false,
         toggle3: { key: 'toggle3', value: 'true', tags: ['test'] },
       };
-      const features = service_any.convertObjectToFeatures(data);
+      const features = servicePrivate.convertObjectToFeatures(data);
       expect(features).toHaveLength(3);
       expect(features[0].key).toBe('toggle1');
       expect(features[0].value).toBe('true');

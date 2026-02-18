@@ -26,6 +26,15 @@ export default [
   {
     files: ['**/*.ts'],
     rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          varsIgnorePattern: '^_',
+          argsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
       '@angular-eslint/directive-selector': [
         'error',
         {

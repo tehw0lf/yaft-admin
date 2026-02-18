@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subject, takeUntil, map, combineLatest } from 'rxjs';
+import { Subject, takeUntil, combineLatest } from 'rxjs';
 
 // Angular Material Imports
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { YaftProviderService } from '../../services/yaft-provider.service';
 import { FilterService } from '../../services/filter.service';
-import { Feature, FeatureStatus } from '../../models/feature.model';
+import { Feature, FeatureStatus, ProviderConnection } from '../../models/feature.model';
 
 export interface DashboardMetrics {
   totalFeatures: number;
@@ -622,6 +622,9 @@ export interface DashboardMetrics {
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  private yaftService = inject(YaftProviderService);
+  private filterService = inject(FilterService);
+
   private destroy$ = new Subject<void>();
 
   metrics: DashboardMetrics = {
@@ -634,11 +637,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
     mostUsedTags: [],
     connectionStatus: 'disconnected'
   };
-
-  constructor(
-    private yaftService: YaftProviderService,
-    private filterService: FilterService
-  ) {}
 
   ngOnInit(): void {
     this.loadDashboardData();
@@ -660,7 +658,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  private updateMetrics(features: Feature[], connection: any): void {
+  private updateMetrics(features: Feature[], connection: ProviderConnection): void {
     const now = new Date();
     
     // Basic counts

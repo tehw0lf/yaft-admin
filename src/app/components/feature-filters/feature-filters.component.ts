@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 import { Subject, takeUntil, debounceTime } from 'rxjs';
@@ -16,7 +16,7 @@ import { MatCardModule } from '@angular/material/card';
 
 import { FilterService } from '../../services/filter.service';
 import { YaftProviderService } from '../../services/yaft-provider.service';
-import { FeatureFilter } from '../../models/feature.model';
+import { Feature, FeatureFilter } from '../../models/feature.model';
 
 @Component({
   selector: 'app-feature-filters',
@@ -171,16 +171,16 @@ import { FeatureFilter } from '../../models/feature.model';
   `]
 })
 export class FeatureFiltersComponent implements OnInit, OnDestroy {
+  private fb = inject(FormBuilder);
+  private filterService = inject(FilterService);
+  private yaftService = inject(YaftProviderService);
+
   private destroy$ = new Subject<void>();
   
   filterForm: FormGroup;
   availableTags: string[] = [];
 
-  constructor(
-    private fb: FormBuilder,
-    private filterService: FilterService,
-    private yaftService: YaftProviderService
-  ) {
+  constructor() {
     this.filterForm = this.createFilterForm();
   }
 
@@ -232,7 +232,7 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     });
   }
 
-  private updateFilters(formValue: any): void {
+  private updateFilters(formValue: { searchText?: string; status?: string[]; tags?: string[]; dateStart?: Date | null; dateEnd?: Date | null }): void {
     const filter: FeatureFilter = {
       searchText: formValue.searchText || '',
       status: formValue.status || [],
@@ -265,7 +265,7 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
     );
   }
 
-  private updateAvailableTags(features: any[]): void {
+  private updateAvailableTags(features: Feature[]): void {
     const tagSet = new Set<string>();
     
     features.forEach(feature => {

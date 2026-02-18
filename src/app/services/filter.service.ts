@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs';
 import { Feature, FeatureFilter } from '../models/feature.model';
 import { YaftProviderService } from './yaft-provider.service';
@@ -7,6 +7,8 @@ import { YaftProviderService } from './yaft-provider.service';
   providedIn: 'root'
 })
 export class FilterService {
+  private yaftService = inject(YaftProviderService);
+
   private filterSubject = new BehaviorSubject<FeatureFilter>({
     searchText: '',
     status: [],
@@ -20,7 +22,7 @@ export class FilterService {
   public filter$ = this.filterSubject.asObservable();
   public filteredFeatures$: Observable<Feature[]>;
 
-  constructor(private yaftService: YaftProviderService) {
+  constructor() {
     // Combine features and filter to create filtered results
     this.filteredFeatures$ = combineLatest([
       this.yaftService.features$,

@@ -1,6 +1,5 @@
-import { Injectable } from '@angular/core';
-import { Observable, forkJoin, of } from 'rxjs';
-import { switchMap, map, catchError } from 'rxjs/operators';
+import { Injectable, inject } from '@angular/core';
+import { Observable, of } from 'rxjs';
 import { YaftProviderService } from './yaft-provider.service';
 import { ErrorHandlerService } from './error-handler.service';
 import { Feature, FeatureWithSecret } from '../models/feature.model';
@@ -9,7 +8,7 @@ export interface BulkOperationResult {
   success: number;
   failed: number;
   errors: string[];
-  results: any[];
+  results: FeatureWithSecret[];
 }
 
 export interface BulkOperationProgress {
@@ -23,10 +22,9 @@ export interface BulkOperationProgress {
   providedIn: 'root'
 })
 export class BulkOperationsService {
-  constructor(
-    private yaftService: YaftProviderService,
-    private errorHandler: ErrorHandlerService
-  ) {}
+  private yaftService = inject(YaftProviderService);
+  private errorHandler = inject(ErrorHandlerService);
+
 
   // Enable multiple features
   enableFeatures(features: FeatureWithSecret[], progressCallback?: (progress: BulkOperationProgress) => void): Observable<BulkOperationResult> {
@@ -86,15 +84,15 @@ export class BulkOperationsService {
     this.errorHandler.showSuccessNotification(`Exported ${features.length} selected features`);
   }
 
-  private executeBulkOperation<T>(
+  private executeBulkOperation(
     features: FeatureWithSecret[],
-    operation: (feature: Feature) => Observable<T>,
+    operation: (feature: Feature) => Observable<FeatureWithSecret | void>,
     actionName: string,
     progressCallback?: (progress: BulkOperationProgress) => void
   ): Observable<BulkOperationResult> {
     const total = features.length;
     let completed = 0;
-    const results: T[] = [];
+    const results: FeatureWithSecret[] = [];
     const errors: string[] = [];
 
     if (total === 0) {
@@ -140,7 +138,7 @@ export class BulkOperationsService {
 
         operation(feature).subscribe({
           next: (result) => {
-            results.push(result);
+            if (result) results.push(result);
             completed++;
             currentIndex++;
             updateProgress(`Completed ${feature.key}`);
@@ -163,7 +161,7 @@ export class BulkOperationsService {
     });
   }
 
-  private enableSingleFeature(feature: FeatureWithSecret): Observable<any> {
+  private enableSingleFeature(feature: FeatureWithSecret): Observable<FeatureWithSecret> {
     if (!feature.secret) {
       return new Observable(observer => {
         observer.error(new Error('No secret available for feature'));
@@ -173,7 +171,7 @@ export class BulkOperationsService {
     return this.yaftService.updateFeature(feature.key, { value: 'true' }, feature.secret);
   }
 
-  private disableSingleFeature(feature: FeatureWithSecret): Observable<any> {
+  private disableSingleFeature(feature: FeatureWithSecret): Observable<FeatureWithSecret> {
     if (!feature.secret) {
       return new Observable(observer => {
         observer.error(new Error('No secret available for feature'));
@@ -183,7 +181,7 @@ export class BulkOperationsService {
     return this.yaftService.updateFeature(feature.key, { value: 'false' }, feature.secret);
   }
 
-  private deleteSingleFeature(feature: FeatureWithSecret): Observable<any> {
+  private deleteSingleFeature(feature: FeatureWithSecret): Observable<void> {
     if (!feature.secret) {
       return new Observable(observer => {
         observer.error(new Error('No secret available for feature'));

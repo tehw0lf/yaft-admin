@@ -19,7 +19,7 @@ export interface TemplateVariable {
   name: string;
   type: 'text' | 'number' | 'date' | 'boolean' | 'select';
   description: string;
-  defaultValue?: any;
+  defaultValue?: string | number | boolean;
   required: boolean;
   options?: string[]; // For select type
   placeholder?: string;
@@ -37,7 +37,7 @@ export interface TemplateUsage {
   templateId: string;
   featureKey: string;
   createdAt: Date;
-  variables?: { [key: string]: any };
+  variables?: { [key: string]: string | number | boolean };
 }
 
 // Built-in template definitions

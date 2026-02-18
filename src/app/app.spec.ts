@@ -13,7 +13,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { MatChipInputEvent } from '@angular/material/chips';
+import { of, throwError } from 'rxjs';
 import { App } from './app';
 import { YaftProviderService } from './services/yaft-provider.service';
 import { FilterService } from './services/filter.service';
@@ -24,13 +25,12 @@ import {
   ProviderType,
   ProviderConnection,
   FeatureWithSecret,
-  Feature,
 } from './models/feature.model';
 describe('App', () => {
   let component: App;
   let fixture: ComponentFixture<App>;
   let mockYaftService: jasmine.SpyObj<YaftProviderService>;
-  let mockFilterService: jasmine.SpyObj<FilterService>;
+  let _mockFilterService: jasmine.SpyObj<FilterService>;
   let mockExportService: jasmine.SpyObj<ExportService>;
   let mockErrorHandler: jasmine.SpyObj<ErrorHandlerService>;
   let mockBulkOperations: jasmine.SpyObj<BulkOperationsService>;
@@ -122,7 +122,7 @@ describe('App', () => {
     mockYaftService = TestBed.inject(
       YaftProviderService
     ) as jasmine.SpyObj<YaftProviderService>;
-    mockFilterService = TestBed.inject(
+    _mockFilterService = TestBed.inject(
       FilterService
     ) as jasmine.SpyObj<FilterService>;
     mockExportService = TestBed.inject(
@@ -341,7 +341,9 @@ describe('App', () => {
     it('should add valid tag', () => {
       const mockEvent = {
         input: { value: 'valid-tag' },
-      } as any;
+        value: 'valid-tag',
+        chipInput: {} as MatChipInputEvent['chipInput']
+      } as MatChipInputEvent;
       component.featureForm.get('tags')?.setValue(['existing-tag']);
       component.addTag(mockEvent);
       const tags = component.getTags();
@@ -351,7 +353,9 @@ describe('App', () => {
     it('should reject invalid tag format', () => {
       const mockEvent = {
         input: { value: 'Invalid Tag!' },
-      } as any;
+        value: 'Invalid Tag!',
+        chipInput: {} as MatChipInputEvent['chipInput']
+      } as MatChipInputEvent;
       component.addTag(mockEvent);
       expect(component.alertMessage).toContain(
         'Tags must be lowercase, alphanumeric, and hyphens only'
@@ -361,7 +365,9 @@ describe('App', () => {
     it('should reject duplicate tags', () => {
       const mockEvent = {
         input: { value: 'existing-tag' },
-      } as any;
+        value: 'existing-tag',
+        chipInput: {} as MatChipInputEvent['chipInput']
+      } as MatChipInputEvent;
       component.featureForm.get('tags')?.setValue(['existing-tag']);
       component.addTag(mockEvent);
       expect(component.alertMessage).toContain('Tag already exists');

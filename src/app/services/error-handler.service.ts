@@ -1,4 +1,4 @@
-import { Injectable, ErrorHandler } from '@angular/core';
+import { Injectable, ErrorHandler, inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, timer } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -13,13 +13,13 @@ export interface RetryConfig {
   providedIn: 'root'
 })
 export class ErrorHandlerService implements ErrorHandler {
+  private snackBar = inject(MatSnackBar);
+
   private readonly defaultRetryConfig: RetryConfig = {
     maxRetries: 3,
     delayMs: 1000,
     backoffMultiplier: 2
   };
-
-  constructor(private snackBar: MatSnackBar) {}
 
   handleError(error: any): void {
     console.error('Global error handler:', error);
@@ -189,7 +189,8 @@ export class ErrorHandlerService implements ErrorHandler {
 // Global error handler configuration
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
-  constructor(private errorHandlerService: ErrorHandlerService) {}
+  private errorHandlerService = inject(ErrorHandlerService);
+
 
   handleError(error: any): void {
     this.errorHandlerService.handleError(error);

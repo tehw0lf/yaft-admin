@@ -16,6 +16,22 @@ export interface FeatureToggleResponse {
   secret?: string; // Only returned on new collection creation
 }
 
+// Go backend returns capitalized field names
+export interface GoFeatureResponse {
+  key?: string;
+  Key?: string;
+  value?: string;
+  Value?: string;
+  activeAt?: string | null;
+  ActiveAt?: string | null;
+  disabledAt?: string | null;
+  DisabledAt?: string | null;
+  tags?: string[];
+  Tags?: string[];
+  secret?: string;
+  Secret?: string;
+}
+
 export interface CollectionHashResponse {
   collectionHash: string;
 }

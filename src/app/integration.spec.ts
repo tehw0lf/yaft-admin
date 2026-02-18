@@ -15,14 +15,13 @@ import {
   ProviderConnection,
   Feature,
   FeatureWithSecret,
-  FeatureToggleResponse,
 } from './models/feature.model';
 describe('YaFT Admin Integration Tests', () => {
   let yaftService: YaftProviderService;
-  let filterService: FilterService;
-  let exportService: ExportService;
+  let _filterService: FilterService;
+  let _exportService: ExportService;
   let httpMock: HttpTestingController;
-  let component: App;
+  let _component: App;
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [
@@ -35,11 +34,11 @@ describe('YaFT Admin Integration Tests', () => {
       providers: [YaftProviderService, FilterService, ExportService],
     }).compileComponents();
     yaftService = TestBed.inject(YaftProviderService);
-    filterService = TestBed.inject(FilterService);
-    exportService = TestBed.inject(ExportService);
+    _filterService = TestBed.inject(FilterService);
+    _exportService = TestBed.inject(ExportService);
     httpMock = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(App);
-    component = fixture.componentInstance;
+    _component = fixture.componentInstance;
     localStorage.clear();
   });
   afterEach(() => {
@@ -76,7 +75,7 @@ describe('YaFT Admin Integration Tests', () => {
               expect(updatedFeature.value).toBe('false');
               // Step 4: Delete feature
               yaftService
-                .deleteFeature(createdFeature.key, createdFeature.secret!)
+                .deleteFeature(createdFeature.key, createdFeature.secret ?? '')
                 .subscribe(() => {
                   done();
                 });
@@ -166,9 +165,9 @@ describe('YaFT Admin Integration Tests', () => {
               // Verify localStorage contains the feature
               const stored = localStorage.getItem('yaft-admin-features');
               expect(stored).toBeTruthy();
-              const features = JSON.parse(stored!);
+              const features = JSON.parse(stored ?? '[]');
               expect(
-                features.find((f: any) => f.key === 'local-test').value
+                features.find((f: Feature) => f.key === 'local-test')?.value
               ).toBe('false');
               // Delete feature
               yaftService.deleteFeature('local-test').subscribe(() => {
@@ -176,9 +175,9 @@ describe('YaFT Admin Integration Tests', () => {
                 const storedAfterDelete = localStorage.getItem(
                   'yaft-admin-features'
                 );
-                const featuresAfterDelete = JSON.parse(storedAfterDelete!);
+                const featuresAfterDelete = JSON.parse(storedAfterDelete ?? '[]');
                 expect(
-                  featuresAfterDelete.find((f: any) => f.key === 'local-test')
+                  featuresAfterDelete.find((f: Feature) => f.key === 'local-test')
                 ).toBeUndefined();
                 done();
               });
@@ -318,8 +317,8 @@ describe('YaFT Admin Integration Tests', () => {
         toggle2: false,
         toggle3: true,
       };
-      const service_any = yaftService as any;
-      const features = service_any.convertObjectToFeatures(booleanData);
+      const service = yaftService as unknown as { convertObjectToFeatures: (data: Record<string, unknown>) => Feature[] };
+      const features = service.convertObjectToFeatures(booleanData);
       expect(features).toHaveLength(3);
       expect(features[0].key).toBe('toggle1');
       expect(features[0].value).toBe('true');
@@ -336,8 +335,8 @@ describe('YaFT Admin Integration Tests', () => {
           activeAt: '2024-01-01T00:00:00Z',
         },
       };
-      const service_any = yaftService as any;
-      const features = service_any.convertObjectToFeatures(mixedData);
+      const service = yaftService as unknown as { convertObjectToFeatures: (data: Record<string, unknown>) => Feature[] };
+      const features = service.convertObjectToFeatures(mixedData);
       expect(features).toHaveLength(2);
       expect(features[0].key).toBe('simple');
       expect(features[0].value).toBe('true');

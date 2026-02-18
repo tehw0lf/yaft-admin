@@ -207,7 +207,6 @@ export class ExportService {
         return result;
       }
 
-      const headers = this.parseCsvLine(lines[0]);
       const features: Feature[] = [];
 
       for (let i = 1; i < lines.length; i++) {
@@ -244,7 +243,7 @@ export class ExportService {
     return result;
   }
 
-  private validateFeatures(features: any[]): {
+  private validateFeatures(features: Feature[]): {
     validFeatures: Feature[];
     errors: string[];
     warnings: string[];
@@ -273,7 +272,7 @@ export class ExportService {
       // Validate and clean feature
       const cleanedFeature: Feature = {
         key: feature.key.trim(),
-        value: feature.value === 'true' || feature.value === true ? 'true' : 'false',
+        value: feature.value === 'true' ? 'true' : 'false',
         activeAt: this.validateAndCleanDate(feature.activeAt),
         disabledAt: this.validateAndCleanDate(feature.disabledAt),
       };
@@ -294,7 +293,7 @@ export class ExportService {
     return { validFeatures, errors, warnings };
   }
 
-  private validateAndCleanDate(date: any): string | null {
+  private validateAndCleanDate(date: string | null | undefined): string | null {
     if (!date) return null;
     
     try {
@@ -327,9 +326,9 @@ export class ExportService {
     return result.map(field => field.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"'));
   }
 
-  private convertObjectToFeatures(data: any): Feature[] {
+  private convertObjectToFeatures(data: Record<string, unknown>): Feature[] {
     const features: Feature[] = [];
-    
+
     for (const [key, value] of Object.entries(data)) {
       try {
         if (typeof value === 'boolean' || value === 'true' || value === 'false') {
@@ -342,10 +341,10 @@ export class ExportService {
           });
         } else if (typeof value === 'object' && value !== null) {
           // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
-          const featureObj = value as any;
+          const featureObj = value as Feature;
           features.push({
             key: featureObj.key || key,
-            value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
+            value: featureObj.value === 'true' ? 'true' : 'false',
             activeAt: featureObj.activeAt || null,
             disabledAt: featureObj.disabledAt || null,
           });

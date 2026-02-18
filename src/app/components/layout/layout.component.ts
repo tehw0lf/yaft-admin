@@ -84,12 +84,12 @@ import { MatMenuModule } from '@angular/material/menu';
               <span>Quick Actions</span>
             </div>
             
-            <a mat-list-item (click)="onExportAll()">
+            <a mat-list-item tabindex="0" (click)="onExportAll()" (keyup.enter)="onExportAll()" (keyup.space)="onExportAll()">
               <mat-icon matListItemIcon>download</mat-icon>
               <span matListItemTitle>Export All</span>
             </a>
-            
-            <a mat-list-item (click)="onImport()">
+
+            <a mat-list-item tabindex="0" (click)="onImport()" (keyup.enter)="onImport()" (keyup.space)="onImport()">
               <mat-icon matListItemIcon>upload</mat-icon>
               <span matListItemTitle>Import</span>
             </a>

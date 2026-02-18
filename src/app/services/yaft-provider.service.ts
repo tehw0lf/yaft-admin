@@ -1,13 +1,14 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { 
-  Feature, 
+import {
+  Feature,
   FeatureWithSecret,
-  FeatureToggleResponse, 
-  FeaturesResponse, 
-  ProviderType, 
+  FeatureToggleResponse,
+  GoFeatureResponse,
+  FeaturesResponse,
+  ProviderType,
   ProviderConnection,
   FeatureStatus
 } from '../models/feature.model';
@@ -16,6 +17,8 @@ import {
   providedIn: 'root'
 })
 export class YaftProviderService {
+  private http = inject(HttpClient);
+
   private connectionSubject = new BehaviorSubject<ProviderConnection>({
     type: ProviderType.API_SERVICE,
     isConnected: false
@@ -26,8 +29,6 @@ export class YaftProviderService {
 
   public connection$ = this.connectionSubject.asObservable();
   public features$ = this.featuresSubject.asObservable();
-
-  constructor(private http: HttpClient) {}
 
   // Connection Management
   connect(connection: ProviderConnection): Observable<boolean> {
@@ -73,12 +74,13 @@ export class YaftProviderService {
         const featuresWithSecrets: FeatureWithSecret[] = apiFeatures.map((feature) => {
           
           // Map Go backend capitalized fields to TypeScript lowercase interface
+          const f = feature as GoFeatureResponse;
           const normalizedFeature: Feature = {
-            key: (feature as any).Key || feature.key,
-            value: (feature as any).Value || feature.value,
-            activeAt: (feature as any).ActiveAt || feature.activeAt,
-            disabledAt: (feature as any).DisabledAt || feature.disabledAt,
-            tags: (feature as any).Tags || feature.tags || [],
+            key: f.Key || f.key || '',
+            value: f.Value || f.value || '',
+            activeAt: f.ActiveAt || f.activeAt,
+            disabledAt: f.DisabledAt || f.disabledAt,
+            tags: f.Tags || f.tags || [],
           };
           
           return {
@@ -115,13 +117,12 @@ export class YaftProviderService {
     };
 
     return this.http.post<FeatureToggleResponse>(`${connection.apiUrl}/features`, testFeature).pipe(
-      map((response) => {
+      map((r) => {
         // Map Go backend capitalized fields
-        const responseKey = (response as any).key || (response as any).Key;
-        const responseSecret = (response as any).secret || (response as any).Secret;
-        
-        // Collection created successfully
-        
+        const response = r as GoFeatureResponse;
+        const responseKey = response.key || response.Key || '';
+        const responseSecret = response.secret || response.Secret;
+
         if (responseSecret) {
           // Store the collection secret for future operations
           this.secretsMap.set('collection-secret', responseSecret);
@@ -140,10 +141,10 @@ export class YaftProviderService {
         // Start with the test feature we just created
         const newFeature: FeatureWithSecret = {
           key: responseKey,
-          value: (response as any).value || (response as any).Value,
-          activeAt: (response as any).activeAt || (response as any).ActiveAt || null,
-          disabledAt: (response as any).disabledAt || (response as any).DisabledAt || null,
-          tags: (response as any).tags || (response as any).Tags || [],
+          value: response.value || response.Value || '',
+          activeAt: response.activeAt || response.ActiveAt || null,
+          disabledAt: response.disabledAt || response.DisabledAt || null,
+          tags: response.tags || response.Tags || [],
           displayKey: this.extractDisplayKey(responseKey),
           secret: responseSecret || 'mock-secret'
         };
@@ -173,7 +174,7 @@ export class YaftProviderService {
     
     // Try to load features, but don't fail if none exist yet
     this.loadFeatures().subscribe({
-      error: () => {} // Silently ignore if no features exist
+      error: () => { /* Silently ignore if no features exist */ }
     });
     
     return of(true);
@@ -222,12 +223,13 @@ export class YaftProviderService {
         const featuresWithSecrets: FeatureWithSecret[] = apiFeatures.map((feature) => {
           
           // Map Go backend capitalized fields to TypeScript lowercase interface
+          const f = feature as GoFeatureResponse;
           const normalizedFeature: Feature = {
-            key: (feature as any).Key || feature.key,
-            value: (feature as any).Value || feature.value,
-            activeAt: (feature as any).ActiveAt || feature.activeAt,
-            disabledAt: (feature as any).DisabledAt || feature.disabledAt,
-            tags: (feature as any).Tags || feature.tags || [],
+            key: f.Key || f.key || '',
+            value: f.Value || f.value || '',
+            activeAt: f.ActiveAt || f.activeAt,
+            disabledAt: f.DisabledAt || f.disabledAt,
+            tags: f.Tags || f.tags || [],
           };
           
           return {
@@ -284,9 +286,9 @@ export class YaftProviderService {
     }
   }
 
-  private convertObjectToFeatures(data: any): Feature[] {
+  private convertObjectToFeatures(data: Record<string, unknown>): Feature[] {
     const features: Feature[] = [];
-    
+
     for (const [key, value] of Object.entries(data)) {
       try {
         if (typeof value === 'boolean' || value === 'true' || value === 'false') {
@@ -300,16 +302,16 @@ export class YaftProviderService {
           });
         } else if (typeof value === 'object' && value !== null) {
           // Feature object format: { "toggleName": { key: "toggleName", value: "true", ... } }
-          const featureObj = value as any;
+          const featureObj = value as Feature;
           features.push({
             key: featureObj.key || key,
-            value: featureObj.value === true || featureObj.value === 'true' ? 'true' : 'false',
+            value: featureObj.value === 'true' ? 'true' : 'false',
             activeAt: featureObj.activeAt || null,
             disabledAt: featureObj.disabledAt || null,
             tags: featureObj.tags || [],
           });
         }
-      } catch (error) {
+      } catch {
         // Skip invalid features silently
       }
     }
@@ -351,7 +353,7 @@ export class YaftProviderService {
       keyToSend = `${connection.baseUUID}|${feature.key}`;
     }
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       key: keyToSend,
       value: feature.value,
       activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString() : null,
@@ -382,11 +384,12 @@ export class YaftProviderService {
         }
         
         // Map Go backend capitalized fields to TypeScript lowercase interface
-        const normalizedKey = (response as any).key || (response as any).Key;
-        const normalizedValue = (response as any).value || (response as any).Value;
-        const normalizedActiveAt = (response as any).activeAt || (response as any).ActiveAt;
-        const normalizedDisabledAt = (response as any).disabledAt || (response as any).DisabledAt;
-        const normalizedTags = (response as any).tags || (response as any).Tags || [];
+        const r = response as GoFeatureResponse;
+        const normalizedKey = r.key || r.Key || '';
+        const normalizedValue = r.value || r.Value || '';
+        const normalizedActiveAt = r.activeAt || r.ActiveAt;
+        const normalizedDisabledAt = r.disabledAt || r.DisabledAt;
+        const normalizedTags = r.tags || r.Tags || [];
         
         this.secretsMap.set(normalizedKey, secret);
         
@@ -483,14 +486,18 @@ export class YaftProviderService {
     return this.http.put<FeatureToggleResponse>(`${connection.apiUrl}/features/${key}`, payload, {
       headers: { 'Authorization': `Bearer ${collectionSecret}` }
     }).pipe(
-      map((response) => ({
-        key: (response as any).key || (response as any).Key,
-        value: (response as any).value || (response as any).Value,
-        activeAt: (response as any).activeAt || (response as any).ActiveAt,
-        disabledAt: (response as any).disabledAt || (response as any).DisabledAt,
-        displayKey: this.extractDisplayKey((response as any).key || (response as any).Key),
-        secret: collectionSecret
-      })),
+      map((r) => {
+        const response = r as GoFeatureResponse;
+        const key = response.key || response.Key || '';
+        return {
+          key,
+          value: response.value || response.Value || '',
+          activeAt: response.activeAt || response.ActiveAt,
+          disabledAt: response.disabledAt || response.DisabledAt,
+          displayKey: this.extractDisplayKey(key),
+          secret: collectionSecret
+        };
+      }),
       catchError((error) => {
         // Fallback to simple enable/disable if comprehensive update fails
         console.warn('Comprehensive update failed, falling back to simple toggle:', error);
@@ -504,7 +511,7 @@ export class YaftProviderService {
     );
   }
 
-  private updateInLocalStorage(key: string, updates: Partial<Feature>, secret?: string): Observable<FeatureWithSecret> {
+  private updateInLocalStorage(key: string, updates: Partial<Feature>, _secret?: string): Observable<FeatureWithSecret> {
     try {
       const currentFeatures = this.featuresSubject.value;
       const featureIndex = currentFeatures.findIndex(f => f.key === key);
@@ -599,15 +606,19 @@ export class YaftProviderService {
       `${connection.apiUrl}/features/activate/${key}/${secret}`, 
       {}
     ).pipe(
-      map((response) => ({
-        key: (response as any).key || (response as any).Key,
-        value: (response as any).value || (response as any).Value,
-        activeAt: (response as any).activeAt || (response as any).ActiveAt,
-        disabledAt: (response as any).disabledAt || (response as any).DisabledAt,
-        tags: (response as any).tags || (response as any).Tags || [],
-        displayKey: this.extractDisplayKey((response as any).key || (response as any).Key),
-        secret: secret
-      })),
+      map((r) => {
+        const response = r as GoFeatureResponse;
+        const key = response.key || response.Key || '';
+        return {
+          key,
+          value: response.value || response.Value || '',
+          activeAt: response.activeAt || response.ActiveAt,
+          disabledAt: response.disabledAt || response.DisabledAt,
+          tags: response.tags || response.Tags || [],
+          displayKey: this.extractDisplayKey(key),
+          secret: secret
+        };
+      }),
       catchError((error) => throwError(() => error))
     );
   }
@@ -622,15 +633,19 @@ export class YaftProviderService {
       `${connection.apiUrl}/features/deactivate/${key}/${secret}`, 
       {}
     ).pipe(
-      map((response) => ({
-        key: (response as any).key || (response as any).Key,
-        value: (response as any).value || (response as any).Value,
-        activeAt: (response as any).activeAt || (response as any).ActiveAt,
-        disabledAt: (response as any).disabledAt || (response as any).DisabledAt,
-        tags: (response as any).tags || (response as any).Tags || [],
-        displayKey: this.extractDisplayKey((response as any).key || (response as any).Key),
-        secret: secret
-      })),
+      map((r) => {
+        const response = r as GoFeatureResponse;
+        const key = response.key || response.Key || '';
+        return {
+          key,
+          value: response.value || response.Value || '',
+          activeAt: response.activeAt || response.ActiveAt,
+          disabledAt: response.disabledAt || response.DisabledAt,
+          tags: response.tags || response.Tags || [],
+          displayKey: this.extractDisplayKey(key),
+          secret: secret
+        };
+      }),
       catchError((error) => throwError(() => error))
     );
   }
