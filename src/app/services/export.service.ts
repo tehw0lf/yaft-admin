@@ -351,6 +351,8 @@ export class ExportService {
           });
         }
       } catch (error) {
+        // Rationale: `key` is an object key from internal feature data, not user-controlled format input. JS template literals are not printf-style format strings.
+        // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
         console.warn(`Failed to convert feature '${key}':`, error);
       }
     }

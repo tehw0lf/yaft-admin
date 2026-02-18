@@ -158,6 +158,8 @@ export class WebSocketService implements OnDestroy {
           retry({
             count: this.maxReconnectAttempts,
             delay: (error, retryCount) => {
+              // Rationale: `retryCount` is an internal RxJS retry counter, not user input. JS template literals are not printf-style format strings.
+              // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
               console.log(`WebSocket retry attempt ${retryCount}:`, error);
               this.updateConnectionStatus({
                 isConnected: false,

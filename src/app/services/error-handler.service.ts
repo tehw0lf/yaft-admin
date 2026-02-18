@@ -94,6 +94,8 @@ export class ErrorHandlerService implements ErrorHandler {
               
               timer(delay).subscribe(() => tryOperation());
             } else {
+              // Rationale: interpolated values are internal retry config numbers, not user input. JS template literals are not printf-style format strings.
+              // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
               console.error(`Operation failed after ${finalConfig.maxRetries} retries:`, error);
               observer.error(error);
             }

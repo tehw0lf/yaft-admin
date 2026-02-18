@@ -188,13 +188,14 @@ export class TemplateService {
   // Process template string with variables
   private processTemplate(template: string, variables: { [key: string]: any }): string {
     let result = template;
-    
+
     // Replace {{variable}} patterns
     Object.keys(variables).forEach(key => {
-      const pattern = new RegExp(`{{${key}}}`, 'g');
+      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const pattern = new RegExp(`{{${escapedKey}}}`, 'g');
       result = result.replace(pattern, String(variables[key]));
     });
-    
+
     return result;
   }
 
@@ -244,8 +245,14 @@ export class TemplateService {
           break;
         
         case 'text':
-          if (variable.pattern && !new RegExp(variable.pattern).test(value)) {
-            errors.push(`${variable.description} format is invalid`);
+          if (variable.pattern) {
+            try {
+              if (!new RegExp(variable.pattern).test(value)) {
+                errors.push(`${variable.description} format is invalid`);
+              }
+            } catch {
+              errors.push(`${variable.description} has an invalid validation pattern`);
+            }
           }
           break;
       }
