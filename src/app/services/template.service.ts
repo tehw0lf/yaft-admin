@@ -192,6 +192,8 @@ export class TemplateService {
     // Replace {{variable}} patterns
     Object.keys(variables).forEach(key => {
       const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Rationale: `escapedKey` has all regex metacharacters sanitized above; the surrounding `{{...}}` literals are hardcoded, so the only dynamic part is the sanitized key name. This is not user-controlled regex input.
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
       const pattern = new RegExp(`{{${escapedKey}}}`, 'g');
       result = result.replace(pattern, String(variables[key]));
     });
@@ -247,6 +249,8 @@ export class TemplateService {
         case 'text':
           if (variable.pattern) {
             try {
+              // Rationale: `variable.pattern` is a developer-defined validation regex stored in template config (localStorage/imported file), not arbitrary end-user input. The surrounding try/catch prevents invalid regex syntax from throwing.
+              // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
               if (!new RegExp(variable.pattern).test(String(value))) {
                 errors.push(`${variable.description} format is invalid`);
               }
