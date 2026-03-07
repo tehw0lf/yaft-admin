@@ -23,7 +23,6 @@ jobs:
             test: "run test:ci"
             build_branch: "run affected:build"
             build_main: "run build --skip-nx-cache"
-            event_name: ${{ github.event_name }}
             artifact_path: "dist"
         secrets:
             NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
