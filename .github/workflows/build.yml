@@ -25,7 +25,6 @@ jobs:
             build_main: "run build --skip-nx-cache"
             artifact_path: "dist"
             docker_meta: '[{"name":"yaft-admin","file":"Dockerfile"}]'
-            publish_github_release: "true"
             npm_audit_omit_dev: true
         secrets:
             NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
