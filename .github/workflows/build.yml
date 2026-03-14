@@ -20,7 +20,7 @@ jobs:
         with:
             tool: "npm"
             lint: "run lint"
-            test: "run test:ci"
+            test: "run test"
             build_branch: "run affected:build"
             build_main: "run build --skip-nx-cache"
             artifact_path: "dist"
