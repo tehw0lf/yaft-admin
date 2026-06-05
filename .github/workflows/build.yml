@@ -22,6 +22,7 @@ jobs:
             tool: "npm"
             lint: "run lint"
             test: "run test"
+            e2e: "run e2e"
             build_branch: "run build"
             build_main: "run build --skip-nx-cache"
             artifact_path: "dist"
