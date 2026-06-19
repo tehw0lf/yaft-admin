@@ -67,5 +67,9 @@
       "unitTestRunner": "jest"
     }
   },
-  "defaultProject": "yaft-admin"
+  "defaultProject": "yaft-admin",
+  "analytics": false,
+  "migrate": {
+    "agentic": true
+  }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 
@@ -396,6 +396,7 @@ export interface AnalyticsData {
       </div>
     </div>
     `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .analytics-container {
       padding: 24px;

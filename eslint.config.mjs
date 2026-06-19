@@ -51,6 +51,10 @@ export default [
           style: 'kebab-case',
         },
       ],
+      // Newly enabled by the flat/angular preset in ESLint v9; was not enforced before the upgrade.
+      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
+      // Newly enabled by the ESLint v9 recommended set; was not enforced before the upgrade.
+      'no-useless-assignment': 'off',
     },
   },
   {

@@ -6,7 +6,9 @@
     "module": "preserve",
     "lib": ["dom", "es2022"],
     "paths": {},
-    "isolatedModules": true
+    "isolatedModules": true,
+    "strict": false,
+    "noUncheckedSideEffectImports": false
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
