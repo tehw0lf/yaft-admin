@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 import { Subject, takeUntil, debounceTime } from 'rxjs';
@@ -116,6 +116,7 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
       </mat-card-content>
     </mat-card>
     `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .filter-card {
       margin-bottom: 16px;
