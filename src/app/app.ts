@@ -21,7 +21,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -33,6 +33,7 @@ import { ExportService } from './services/export.service';
 import { ErrorHandlerService } from './services/error-handler.service';
 import { BulkOperationsService } from './services/bulk-operations.service';
 import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
+import { ImportPreviewDialogComponent, ImportPreviewDialogData } from './components/import-preview-dialog/import-preview-dialog.component';
 import { DragDropDirective } from './directives/drag-drop.directive';
 import { timeRangeValidator } from './validators/time-range.validator';
 import {
@@ -79,6 +80,7 @@ export class App implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private yaftService = inject(YaftProviderService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
   private filterService = inject(FilterService);
   private exportService = inject(ExportService);
   private errorHandler = inject(ErrorHandlerService);
@@ -566,40 +568,33 @@ export class App implements OnInit, OnDestroy {
 
   private processImportFile(file: File): void {
     this.errorHandler.showInfoNotification('Importing features...');
-    
+
     this.exportService.importFromFile(file).then(result => {
       if (result.success) {
-        this.errorHandler.showSuccessNotification(
-          `Successfully imported ${result.features.length} features`
-        );
-        
-        if (result.warnings.length > 0) {
-          console.warn('Import warnings:', result.warnings);
-          result.warnings.forEach(warning => 
-            this.errorHandler.showWarningNotification(warning, 2000)
-          );
-        }
-        
-        // TODO: Show import preview dialog and allow user to confirm
-        this.showImportPreview(result.features);
+        const data: ImportPreviewDialogData = {
+          features: result.features,
+          warnings: result.warnings,
+          existingFeatures: this.features
+        };
+
+        const dialogRef = this.dialog.open(ImportPreviewDialogComponent, {
+          data,
+          autoFocus: false
+        });
+
+        dialogRef.afterClosed()
+          .pipe(takeUntil(this.destroy$))
+          .subscribe(confirmed => {
+            if (confirmed) {
+              this.importFeatures(result.features);
+            }
+          });
       } else {
         this.errorHandler.showErrorNotification(
           `Import failed: ${result.errors.join(', ')}`
         );
       }
     });
-  }
-
-  private showImportPreview(features: Feature[]): void {
-    // For now, just show a simple confirmation
-    // In a full implementation, this would show a dialog with feature preview
-    const confirmed = confirm(
-      `Import ${features.length} features? This will add them to your current provider.`
-    );
-    
-    if (confirmed) {
-      this.importFeatures(features);
-    }
   }
 
   private importFeatures(features: Feature[]): void {
