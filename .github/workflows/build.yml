@@ -29,5 +29,3 @@ jobs:
             docker_meta: '[{"name":"yaft-admin","file":"Dockerfile"}]'
             npm_audit_omit_dev: true
             cyclonedx_ignore_npm_errors: true
-        secrets:
-            NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
