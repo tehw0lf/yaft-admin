@@ -16,13 +16,13 @@ YaFT Admin is a standalone Angular application for managing feature toggles acro
 - Uses Angular Material components for modern UI
 - Reactive forms for connection and feature management
 
-**YaftProviderService** (`src/services/yaft-provider.service.ts`)
+**YaftProviderService** (`src/app/services/yaft-provider.service.ts`)
 - Abstraction layer for different YaFT data sources
 - Handles connection management and CRUD operations
 - Supports multiple provider types (API Service, Local Storage, Boolean variants)
 - Provides reactive streams for connection status and feature updates
 
-**Feature Models** (`src/models/feature.model.ts`)
+**Feature Models** (`src/app/models/feature.model.ts`)
 - Type definitions for features, connections, and provider types
 - Interfaces for API responses and internal data structures
 
