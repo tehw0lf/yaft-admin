@@ -9,6 +9,7 @@ import {
 } from '../models/template.model';
 import { Feature } from '../models/feature.model';
 import { ErrorHandlerService } from './error-handler.service';
+import { compileSafePattern, isSafePattern } from './safe-pattern';
 
 @Injectable({
   providedIn: 'root'
@@ -248,14 +249,14 @@ export class TemplateService {
 
         case 'text':
           if (variable.pattern) {
-            try {
-              // Rationale: `variable.pattern` is a developer-defined validation regex stored in template config (localStorage/imported file), not arbitrary end-user input. The surrounding try/catch prevents invalid regex syntax from throwing.
-              // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
-              if (!new RegExp(variable.pattern).test(String(value))) {
-                errors.push(`${variable.description} format is invalid`);
-              }
-            } catch {
+            // `variable.pattern` can originate from an imported template file, so it
+            // is screened for catastrophic backtracking before being compiled. A
+            // try/catch would not help here: ReDoS hangs rather than throws.
+            const compiled = compileSafePattern(variable.pattern);
+            if (!compiled) {
               errors.push(`${variable.description} has an invalid validation pattern`);
+            } else if (!compiled.test(String(value))) {
+              errors.push(`${variable.description} format is invalid`);
             }
           }
           break;
@@ -354,6 +355,14 @@ export class TemplateService {
 
       const importedTemplates = data.templates.map((t: Partial<FeatureTemplate>) => ({
         ...t,
+        // Drop validation patterns that could hang the tab via catastrophic
+        // backtracking. Imported files are untrusted, so this is enforced at the
+        // boundary rather than relying on every later consumer to re-check.
+        variables: t.variables?.map(variable =>
+          variable.pattern && !isSafePattern(variable.pattern)
+            ? { ...variable, pattern: undefined }
+            : variable
+        ),
         id: this.generateTemplateId(), // Generate new IDs to avoid conflicts
         isBuiltIn: false,
         createdAt: new Date(),
