@@ -1,4 +1,4 @@
-import { isSafePattern } from './safe-pattern';
+import { compileSafePattern, isSafePattern } from './safe-pattern';
 
 describe('isSafePattern', () => {
   it('rejects patterns with nested quantifiers', () => {
@@ -26,5 +26,19 @@ describe('isSafePattern', () => {
     expect(isSafePattern('^\\d{4}-\\d{2}-\\d{2}$')).toBe(true);
     expect(isSafePattern('^.{3,50}$')).toBe(true);
     expect(isSafePattern('^(foo|bar)$')).toBe(true);
+  });
+
+  describe('compileSafePattern', () => {
+    it('returns a usable RegExp for a safe pattern', () => {
+      const re = compileSafePattern('^[a-z0-9-_]+$');
+      expect(re).toBeInstanceOf(RegExp);
+      expect(re?.test('valid-key_1')).toBe(true);
+      expect(re?.test('Invalid Key!')).toBe(false);
+    });
+
+    it('returns null for ReDoS-prone and invalid patterns', () => {
+      expect(compileSafePattern('(a+)+$')).toBeNull();
+      expect(compileSafePattern('([unclosed')).toBeNull();
+    });
   });
 });

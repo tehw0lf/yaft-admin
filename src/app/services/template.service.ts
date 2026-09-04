@@ -9,7 +9,7 @@ import {
 } from '../models/template.model';
 import { Feature } from '../models/feature.model';
 import { ErrorHandlerService } from './error-handler.service';
-import { isSafePattern } from './safe-pattern';
+import { compileSafePattern, isSafePattern } from './safe-pattern';
 
 @Injectable({
   providedIn: 'root'
@@ -252,9 +252,10 @@ export class TemplateService {
             // `variable.pattern` can originate from an imported template file, so it
             // is screened for catastrophic backtracking before being compiled. A
             // try/catch would not help here: ReDoS hangs rather than throws.
-            if (!isSafePattern(variable.pattern)) {
+            const compiled = compileSafePattern(variable.pattern);
+            if (!compiled) {
               errors.push(`${variable.description} has an invalid validation pattern`);
-            } else if (!new RegExp(variable.pattern).test(String(value))) {
+            } else if (!compiled.test(String(value))) {
               errors.push(`${variable.description} format is invalid`);
             }
           }
