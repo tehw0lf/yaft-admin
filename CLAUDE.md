@@ -58,7 +58,7 @@ nx build yaft-admin          # Alternative build command
 npm test                     # Run unit tests with Jest
 nx test yaft-admin           # Alternative test command
 npm run e2e                  # Run end-to-end tests
-nx e2e yaft-admin-e2e        # Alternative E2E command
+nx e2e e2e                   # Alternative E2E command
 ```
 
 ### Linting and Formatting

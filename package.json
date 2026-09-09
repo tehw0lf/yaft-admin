@@ -1,12 +1,12 @@
 {
   "name": "@tehw0lf/yaft-admin",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "license": "MIT",
   "scripts": {
     "start": "nx serve",
-    "build": "nx build",
-    "lint": "nx lint",
-    "test": "nx test",
+    "build": "nx run-many -t build",
+    "lint": "nx run-many -t lint",
+    "test": "nx run-many -t test",
     "e2e": "nx e2e e2e"
   },
   "private": true,
