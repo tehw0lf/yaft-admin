@@ -17,12 +17,74 @@
 /** Patterns longer than this are rejected outright. */
 const MAX_PATTERN_LENGTH = 200;
 
+/** Group openings that are not capturing: `(?:`, `(?=`, `(?!`, `(?<=`, `(?<!`, `(?<name>`. */
+const GROUP_PREFIX = /^\?(?::|=|!|<=|<!|<[A-Za-z_$][\w$]*>)/;
+
+/** A quantifier that immediately follows a group: `+`, `*`, `{2,}`. */
+const TRAILING_QUANTIFIER = /^\s*(?:[+*]|\{\d+,\}?)/;
+
 /**
- * A quantified group that itself contains a quantifier - `(a+)+`, `(a*)*`,
- * `(a+){2,}` and friends. This nested-quantifier shape is the classic driver of
- * exponential backtracking.
+ * Whether `pattern` contains a quantified group that itself holds a quantifier
+ * - `(a+)+`, `(a*)*`, `(a?a?)+`, `(a+){2,}` and friends. That nested shape is
+ * the classic driver of exponential backtracking.
+ *
+ * This scans rather than matching one regex, because the shapes that have to be
+ * told apart do not survive a single expression:
+ *
+ * - `?` counts as an inner quantifier, so `(a?a?)+$` is caught. It is not
+ *   theoretical: that pattern takes over 20 seconds on 24 characters, while
+ *   `(a?)+$` alone is cheap because the engine drops an empty loop body.
+ * - But `?` also opens a non-capturing or look-around group, and `(?:ab)+$` is
+ *   perfectly safe, so the prefix is skipped before the body is examined.
+ * - A nested group still counts, so `((a+))+$` is caught.
+ * - An escaped quantifier is a literal, so `(a\+)+$` is safe.
  */
-const NESTED_QUANTIFIER = /\([^()]*[+*}][^()]*\)\s*[+*]|\([^()]*[+*][^()]*\)\s*\{\d+,\}?/;
+function hasNestedQuantifier(pattern: string): boolean {
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern[i] === '\\') {
+      i++;
+      continue;
+    }
+    if (pattern[i] !== '(') continue;
+
+    let cursor = i + 1;
+    const prefix = GROUP_PREFIX.exec(pattern.slice(cursor));
+    if (prefix) cursor += prefix[0].length;
+
+    // The group body, nested groups and all, up to this group's own ')'.
+    let body = '';
+    let depth = 0;
+    let end = cursor;
+    for (; end < pattern.length; end++) {
+      const char = pattern[end];
+      if (char === '\\') {
+        body += char + (pattern[end + 1] ?? '');
+        end++;
+        continue;
+      }
+      if (char === '(') depth++;
+      else if (char === ')') {
+        if (depth === 0) break;
+        depth--;
+      }
+      body += char;
+    }
+
+    // Unterminated group: new RegExp() rejects it later anyway.
+    if (end >= pattern.length) continue;
+    if (!TRAILING_QUANTIFIER.test(pattern.slice(end + 1))) continue;
+
+    for (let j = 0; j < body.length; j++) {
+      if (body[j] === '\\') {
+        j++;
+        continue;
+      }
+      if (body[j] === '+' || body[j] === '*' || body[j] === '?') return true;
+      if (body[j] === '{' && /^\{\d+,/.test(body.slice(j))) return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Compiles `pattern` if it is safe to execute, otherwise returns null.
@@ -39,7 +101,7 @@ export function compileSafePattern(pattern: string): RegExp | null {
     return null;
   }
 
-  if (NESTED_QUANTIFIER.test(pattern)) {
+  if (hasNestedQuantifier(pattern)) {
     return null;
   }
 
