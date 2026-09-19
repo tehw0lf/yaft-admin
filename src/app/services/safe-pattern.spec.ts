@@ -43,6 +43,27 @@ describe('isSafePattern', () => {
     expect(isSafePattern('(a\\*)+$')).toBe(true);
   });
 
+  it('accepts a quantifier that applies to a literal, not the group', () => {
+    // Whitespace is an atom, so the `+` here repeats the space.
+    expect(isSafePattern('(a+) +$')).toBe(true);
+  });
+
+  it('accepts a nested group prefix and class literals in the body', () => {
+    expect(isSafePattern('((?:ab))+$')).toBe(true);
+    expect(isSafePattern('([?])+$')).toBe(true);
+    expect(isSafePattern('([+*])+$')).toBe(true);
+  });
+
+  it('accepts a fixed repetition, which cannot overlap', () => {
+    expect(isSafePattern('(ab){2}$')).toBe(true);
+    expect(isSafePattern('(a{2}){3}$')).toBe(true);
+  });
+
+  it('rejects a variable bounded quantifier inside a repeated group', () => {
+    expect(isSafePattern('(a{1,2})+$')).toBe(false);
+    expect(isSafePattern('(a{2,})+$')).toBe(false);
+  });
+
   it('rejects overly long patterns', () => {
     expect(isSafePattern('a'.repeat(201))).toBe(false);
   });

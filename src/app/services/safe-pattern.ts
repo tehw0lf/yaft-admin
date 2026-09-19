@@ -20,8 +20,13 @@ const MAX_PATTERN_LENGTH = 200;
 /** Group openings that are not capturing: `(?:`, `(?=`, `(?!`, `(?<=`, `(?<!`, `(?<name>`. */
 const GROUP_PREFIX = /^\?(?::|=|!|<=|<!|<[A-Za-z_$][\w$]*>)/;
 
-/** A quantifier that immediately follows a group: `+`, `*`, `{2,}`. */
-const TRAILING_QUANTIFIER = /^\s*(?:[+*]|\{\d+,\}?)/;
+/**
+ * A quantifier directly after a group: `+`, `*`, `{2,}`, `{1,2}`.
+ *
+ * No leading `\s*`: whitespace is a literal atom in a regex, so in `(a+) +$`
+ * the `+` quantifies the space and the group is not repeated at all.
+ */
+const TRAILING_QUANTIFIER = /^(?:[+*]|\{(\d+)(,(\d*))?\})/;
 
 /**
  * Whether `pattern` contains a quantified group that itself holds a quantifier
@@ -55,6 +60,7 @@ function hasNestedQuantifier(pattern: string): boolean {
     let body = '';
     let depth = 0;
     let end = cursor;
+    let inClass = false;
     for (; end < pattern.length; end++) {
       const char = pattern[end];
       if (char === '\\') {
@@ -62,7 +68,10 @@ function hasNestedQuantifier(pattern: string): boolean {
         end++;
         continue;
       }
-      if (char === '(') depth++;
+      if (inClass) {
+        if (char === ']') inClass = false;
+      } else if (char === '[') inClass = true;
+      else if (char === '(') depth++;
       else if (char === ')') {
         if (depth === 0) break;
         depth--;
@@ -72,16 +81,53 @@ function hasNestedQuantifier(pattern: string): boolean {
 
     // Unterminated group: new RegExp() rejects it later anyway.
     if (end >= pattern.length) continue;
-    if (!TRAILING_QUANTIFIER.test(pattern.slice(end + 1))) continue;
+    const trailing = TRAILING_QUANTIFIER.exec(pattern.slice(end + 1));
+    if (!trailing) continue;
 
-    for (let j = 0; j < body.length; j++) {
-      if (body[j] === '\\') {
-        j++;
-        continue;
-      }
-      if (body[j] === '+' || body[j] === '*' || body[j] === '?') return true;
-      if (body[j] === '{' && /^\{\d+,/.test(body.slice(j))) return true;
+    // `{n}` repeats a fixed number of times and cannot overlap, so it does not
+    // open the door to backtracking the way `{n,}` and `{n,m}` do.
+    const [, min, comma, max] = trailing;
+    if (min !== undefined && !comma) continue;
+
+    if (bodyHasQuantifier(body)) return true;
+  }
+  return false;
+}
+
+/**
+ * Whether a group body contains a quantifier of its own.
+ *
+ * Has to know the same syntax the outer scan does, or it mistakes punctuation
+ * for an operator: `?` opens a nested group in `((?:ab))+$`, and inside a
+ * character class every one of `?`, `+`, `*` is an ordinary literal, so
+ * `([?])+$` and `([+*])+$` are safe.
+ */
+function bodyHasQuantifier(body: string): boolean {
+  let inClass = false;
+  for (let i = 0; i < body.length; i++) {
+    const char = body[i];
+    if (char === '\\') {
+      i++;
+      continue;
     }
+    if (inClass) {
+      if (char === ']') inClass = false;
+      continue;
+    }
+    if (char === '[') {
+      inClass = true;
+      continue;
+    }
+    if (char === '(') {
+      // Skip a nested group's prefix so its `?` is not read as a quantifier.
+      const prefix = GROUP_PREFIX.exec(body.slice(i + 1));
+      if (prefix) i += prefix[0].length;
+      continue;
+    }
+    if (char === '+' || char === '*' || char === '?') return true;
+    // `{n,}` and `{n,m}` can overlap; a fixed `{n}` cannot.
+    const braces = /^\{\d+,\d*\}/.exec(body.slice(i));
+    if (braces) return true;
   }
   return false;
 }
