@@ -13,9 +13,11 @@ export function timeRangeValidator(): ValidatorFn {
     const disabledDate = new Date(disabledAt);
 
     if (activeDate >= disabledDate) {
-      return { timeRangeInvalid: { 
-        message: 'Active time must be before disabled time' 
-      }};
+      return {
+        timeRangeInvalid: {
+          message: 'Active time must be before disabled time',
+        },
+      };
     }
 
     return null;
@@ -32,10 +34,10 @@ export function futureDateValidator(): ValidatorFn {
     const now = new Date();
 
     if (inputDate <= now) {
-      return { 
-        pastDate: { 
-          message: 'Date must be in the future' 
-        } 
+      return {
+        pastDate: {
+          message: 'Date must be in the future',
+        },
       };
     }
 

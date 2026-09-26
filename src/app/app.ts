@@ -1,5 +1,17 @@
-import { Component, OnInit, OnDestroy, ViewChild, inject, ChangeDetectionStrategy } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { MatStepper } from '@angular/material/stepper';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -33,7 +45,10 @@ import { ExportService } from './services/export.service';
 import { ErrorHandlerService } from './services/error-handler.service';
 import { BulkOperationsService } from './services/bulk-operations.service';
 import { FeatureFiltersComponent } from './components/feature-filters/feature-filters.component';
-import { ImportPreviewDialogComponent, ImportPreviewDialogData } from './components/import-preview-dialog/import-preview-dialog.component';
+import {
+  ImportPreviewDialogComponent,
+  ImportPreviewDialogData,
+} from './components/import-preview-dialog/import-preview-dialog.component';
 import { DragDropDirective } from './directives/drag-drop.directive';
 import { timeRangeValidator } from './validators/time-range.validator';
 import {
@@ -41,7 +56,7 @@ import {
   FeatureWithSecret,
   ProviderType,
   ProviderConnection,
-  FeatureStatus
+  FeatureStatus,
 } from './models/feature.model';
 
 @Component({
@@ -70,7 +85,7 @@ import {
     MatDatepickerModule,
     MatNativeDateModule,
     FeatureFiltersComponent,
-    DragDropDirective
+    DragDropDirective,
   ],
   selector: 'app-root',
   templateUrl: './app.html',
@@ -97,12 +112,21 @@ export class App implements OnInit, OnDestroy {
   // State
   connectionStatus: ProviderConnection = {
     type: ProviderType.API_SERVICE,
-    isConnected: false
+    isConnected: false,
   };
-  
+
   features: FeatureWithSecret[] = [];
   filteredFeatures: FeatureWithSecret[] = [];
-  displayedColumns: string[] = ['select', 'key', 'status', 'value', 'tags', 'activeAt', 'disabledAt', 'actions'];
+  displayedColumns: string[] = [
+    'select',
+    'key',
+    'status',
+    'value',
+    'tags',
+    'activeAt',
+    'disabledAt',
+    'actions',
+  ];
 
   get currentDisplayedColumns(): string[] {
     if (this.isBooleanProvider) {
@@ -110,7 +134,7 @@ export class App implements OnInit, OnDestroy {
     }
     return this.displayedColumns;
   }
-  
+
   // UI State
   isConnecting = false;
   isLoading = false;
@@ -119,15 +143,15 @@ export class App implements OnInit, OnDestroy {
   editingFeature: FeatureWithSecret | null = null;
   alertMessage = '';
   alertType: 'success' | 'error' = 'success';
-  
+
   // Bulk operations
   selectedFeatures = new Set<FeatureWithSecret>();
   isAllSelected = false;
   isBulkOperating = false;
-  
+
   // Drag and drop state
   isDragOverActive = false;
-  
+
   // Chip input configuration
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
 
@@ -140,32 +164,32 @@ export class App implements OnInit, OnDestroy {
     // Subscribe to connection status
     this.yaftService.connection$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(connection => {
+      .subscribe((connection) => {
         this.connectionStatus = connection;
-        
+
         // Update form validation based on provider type
         if (connection.isConnected) {
           this.updateFormValidation();
         }
-        
+
         // WebSocket functionality is not implemented in the Go backend, so we skip WebSocket connection
       });
 
     // Subscribe to features
     this.yaftService.features$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(features => {
+      .subscribe((features) => {
         this.features = features;
         this.isLoading = false;
       });
-    
+
     // Subscribe to filtered features
     this.filterService.filteredFeatures$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(filteredFeatures => {
+      .subscribe((filteredFeatures) => {
         this.filteredFeatures = filteredFeatures;
       });
-    
+
     // WebSocket feature updates not implemented in Go backend
   }
 
@@ -180,20 +204,23 @@ export class App implements OnInit, OnDestroy {
       apiUrl: ['http://localhost:8080', Validators.required],
       baseUUID: [''],
       configPath: [''],
-      collectionSecret: [''] // Optional secret for existing collections
+      collectionSecret: [''], // Optional secret for existing collections
     });
   }
 
   private createFeatureForm(): FormGroup {
-    return this.fb.group({
-      key: ['', Validators.required],
-      value: ['false', Validators.required],
-      tags: [[]],
-      activeAt: [''],
-      disabledAt: ['']
-    }, { 
-      validators: [timeRangeValidator()] 
-    });
+    return this.fb.group(
+      {
+        key: ['', Validators.required],
+        value: ['false', Validators.required],
+        tags: [[]],
+        activeAt: [''],
+        disabledAt: [''],
+      },
+      {
+        validators: [timeRangeValidator()],
+      },
+    );
   }
 
   private updateFormValidation(): void {
@@ -231,25 +258,33 @@ export class App implements OnInit, OnDestroy {
     this.featureForm.updateValueAndValidity();
   }
 
-
   get isApiProvider(): boolean {
     const providerType = this.connectionForm.get('providerType')?.value;
-    return providerType === ProviderType.API_SERVICE || providerType === ProviderType.API_SERVICE_BOOLEAN;
+    return (
+      providerType === ProviderType.API_SERVICE ||
+      providerType === ProviderType.API_SERVICE_BOOLEAN
+    );
   }
 
   get isLocalStorageProvider(): boolean {
-    return this.connectionStatus.type === ProviderType.LOCAL_STORAGE || 
-           this.connectionStatus.type === ProviderType.LOCAL_STORAGE_BOOLEAN;
+    return (
+      this.connectionStatus.type === ProviderType.LOCAL_STORAGE ||
+      this.connectionStatus.type === ProviderType.LOCAL_STORAGE_BOOLEAN
+    );
   }
 
   get isBooleanProvider(): boolean {
-    return this.connectionStatus.type === ProviderType.API_SERVICE_BOOLEAN || 
-           this.connectionStatus.type === ProviderType.LOCAL_STORAGE_BOOLEAN;
+    return (
+      this.connectionStatus.type === ProviderType.API_SERVICE_BOOLEAN ||
+      this.connectionStatus.type === ProviderType.LOCAL_STORAGE_BOOLEAN
+    );
   }
 
   get isFeatureObjectProvider(): boolean {
-    return this.connectionStatus.type === ProviderType.API_SERVICE || 
-           this.connectionStatus.type === ProviderType.LOCAL_STORAGE;
+    return (
+      this.connectionStatus.type === ProviderType.API_SERVICE ||
+      this.connectionStatus.type === ProviderType.LOCAL_STORAGE
+    );
   }
 
   onProviderTypeChange(_event: { value: ProviderType }) {
@@ -261,7 +296,7 @@ export class App implements OnInit, OnDestroy {
       this.connectionForm.get('apiUrl')?.clearValidators();
       this.connectionForm.get('configPath')?.clearValidators();
     }
-    
+
     this.connectionForm.get('apiUrl')?.updateValueAndValidity();
     this.connectionForm.get('configPath')?.updateValueAndValidity();
   }
@@ -271,32 +306,41 @@ export class App implements OnInit, OnDestroy {
 
     this.isConnecting = true;
     const formValue = this.connectionForm.value;
-    
-    const isApiProvider = formValue.providerType === ProviderType.API_SERVICE || 
-                        formValue.providerType === ProviderType.API_SERVICE_BOOLEAN;
-    
+
+    const isApiProvider =
+      formValue.providerType === ProviderType.API_SERVICE ||
+      formValue.providerType === ProviderType.API_SERVICE_BOOLEAN;
+
     const connection: ProviderConnection = {
       type: formValue.providerType,
       apiUrl: isApiProvider ? formValue.apiUrl : undefined,
       baseUUID: isApiProvider ? formValue.baseUUID : undefined,
       configPath: !isApiProvider ? formValue.configPath : undefined,
-      isConnected: false
+      isConnected: false,
     };
 
     // Set collection secret if provided for API providers
-    if (isApiProvider && formValue.collectionSecret && formValue.collectionSecret.trim()) {
+    if (
+      isApiProvider &&
+      formValue.collectionSecret &&
+      formValue.collectionSecret.trim()
+    ) {
       this.yaftService.setCollectionSecret(formValue.collectionSecret.trim());
     }
 
-    this.yaftService.connect(connection)
+    this.yaftService
+      .connect(connection)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (success) => {
           this.isConnecting = false;
           if (success) {
-            this.showAlert('Data source connected, redirecting to feature toggles...', 'success');
+            this.showAlert(
+              'Data source connected, redirecting to feature toggles...',
+              'success',
+            );
             this.onRefresh();
-            
+
             // Auto-advance to feature toggles step after a brief delay
             setTimeout(() => {
               if (this.stepper) {
@@ -308,7 +352,7 @@ export class App implements OnInit, OnDestroy {
         error: (error) => {
           this.isConnecting = false;
           this.showAlert(`Failed to connect: ${error.message}`, 'error');
-        }
+        },
       });
   }
 
@@ -322,45 +366,56 @@ export class App implements OnInit, OnDestroy {
 
     this.isCreating = true;
     const formValue = this.featureForm.value;
-    
+
     const feature: Omit<Feature, 'secret'> = {
       key: formValue.key,
       value: formValue.value,
       activeAt: null,
       disabledAt: null,
-      tags: formValue.tags || []
+      tags: formValue.tags || [],
     };
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
-      feature.activeAt = formValue.activeAt ? new Date(formValue.activeAt).toISOString() : null;
-      feature.disabledAt = formValue.disabledAt ? new Date(formValue.disabledAt).toISOString() : null;
+      feature.activeAt = formValue.activeAt
+        ? new Date(formValue.activeAt).toISOString()
+        : null;
+      feature.disabledAt = formValue.disabledAt
+        ? new Date(formValue.disabledAt).toISOString()
+        : null;
     }
 
-    this.yaftService.createFeature(feature)
+    this.yaftService
+      .createFeature(feature)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (newFeature) => {
           this.isCreating = false;
-          this.showAlert(`Feature '${newFeature.key}' created successfully`, 'success');
+          this.showAlert(
+            `Feature '${newFeature.key}' created successfully`,
+            'success',
+          );
           this.featureForm.reset({ value: 'false', tags: [] });
-          
+
           // WebSocket notifications not implemented in Go backend
-          
+
           // Show secret if created via API
           if (newFeature.secret) {
-            this.snackBar.open(`Secret: ${newFeature.secret}`, 'Copy', {
-              duration: 10000,
-              panelClass: ['secret-snackbar']
-            }).onAction().subscribe(() => {
-              this.copyToClipboard(newFeature.secret ?? '');
-            });
+            this.snackBar
+              .open(`Secret: ${newFeature.secret}`, 'Copy', {
+                duration: 10000,
+                panelClass: ['secret-snackbar'],
+              })
+              .onAction()
+              .subscribe(() => {
+                this.copyToClipboard(newFeature.secret ?? '');
+              });
           }
         },
         error: (error) => {
           this.isCreating = false;
           this.showAlert(`Failed to create feature: ${error.message}`, 'error');
-        }
+        },
       });
   }
 
@@ -372,43 +427,56 @@ export class App implements OnInit, OnDestroy {
 
     this.isCreating = true; // Reuse the same loading state
     const formValue = this.featureForm.getRawValue(); // Get raw value to include disabled fields
-    
+
     const updates: Partial<Feature> = {
       value: formValue.value,
-      tags: formValue.tags || []
+      tags: formValue.tags || [],
     };
 
     // Only include advanced fields for feature object providers
     if (this.isFeatureObjectProvider) {
-      updates.activeAt = formValue.activeAt ? new Date(formValue.activeAt).toISOString() : null;
-      updates.disabledAt = formValue.disabledAt ? new Date(formValue.disabledAt).toISOString() : null;
+      updates.activeAt = formValue.activeAt
+        ? new Date(formValue.activeAt).toISOString()
+        : null;
+      updates.disabledAt = formValue.disabledAt
+        ? new Date(formValue.disabledAt).toISOString()
+        : null;
     }
 
-    this.yaftService.updateFeature(this.editingFeature.key, updates, this.editingFeature.secret)
+    this.yaftService
+      .updateFeature(
+        this.editingFeature.key,
+        updates,
+        this.editingFeature.secret,
+      )
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.isCreating = false;
-          this.showAlert(`Feature '${this.editingFeature?.key}' updated successfully`, 'success');
+          this.showAlert(
+            `Feature '${this.editingFeature?.key}' updated successfully`,
+            'success',
+          );
 
           // Exit edit mode and reset form
           this.onCancelEdit();
           this.onRefresh();
-          
+
           // WebSocket notifications not implemented in Go backend
         },
         error: (error) => {
           this.isCreating = false;
           this.showAlert(`Failed to update feature: ${error.message}`, 'error');
-        }
+        },
       });
   }
 
   onRefresh() {
     if (!this.connectionStatus.isConnected) return;
-    
+
     this.isLoading = true;
-    this.yaftService.loadFeatures()
+    this.yaftService
+      .loadFeatures()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -417,7 +485,7 @@ export class App implements OnInit, OnDestroy {
         error: (error) => {
           this.isLoading = false;
           this.showAlert(`Failed to load features: ${error.message}`, 'error');
-        }
+        },
       });
   }
 
@@ -428,50 +496,61 @@ export class App implements OnInit, OnDestroy {
     }
 
     const updates = { value: enabled ? 'true' : 'false' };
-    
-    this.yaftService.updateFeature(feature.key, updates, feature.secret)
+
+    this.yaftService
+      .updateFeature(feature.key, updates, feature.secret)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.showAlert(`Feature '${feature.key}' ${enabled ? 'enabled' : 'disabled'}`, 'success');
+          this.showAlert(
+            `Feature '${feature.key}' ${enabled ? 'enabled' : 'disabled'}`,
+            'success',
+          );
           this.onRefresh();
-          
+
           // WebSocket notifications not implemented in Go backend
         },
         error: (error) => {
           this.showAlert(`Failed to update feature: ${error.message}`, 'error');
-        }
+        },
       });
   }
 
   onEditFeature(feature: FeatureWithSecret) {
     this.isEditing = true;
     this.editingFeature = feature;
-    
+
     // Convert ISO strings to datetime-local format (YYYY-MM-DDTHH:mm)
     this.featureForm.patchValue({
       key: feature.key,
       value: feature.value,
       tags: feature.tags || [],
-      activeAt: feature.activeAt ? new Date(feature.activeAt).toISOString().slice(0, 16) : '',
-      disabledAt: feature.disabledAt ? new Date(feature.disabledAt).toISOString().slice(0, 16) : ''
+      activeAt: feature.activeAt
+        ? new Date(feature.activeAt).toISOString().slice(0, 16)
+        : '',
+      disabledAt: feature.disabledAt
+        ? new Date(feature.disabledAt).toISOString().slice(0, 16)
+        : '',
     });
-    
+
     // Disable the key field since we can't change it during edit
     this.featureForm.get('key')?.disable();
-    
-    this.showAlert('Feature loaded for editing. Click "Update Feature" to save changes.', 'success');
+
+    this.showAlert(
+      'Feature loaded for editing. Click "Update Feature" to save changes.',
+      'success',
+    );
   }
 
   onCancelEdit() {
     this.isEditing = false;
     this.editingFeature = null;
-    this.featureForm.reset({ 
-      value: 'false', 
+    this.featureForm.reset({
+      value: 'false',
       tags: [],
       key: '',
       activeAt: '',
-      disabledAt: ''
+      disabledAt: '',
     });
     this.featureForm.get('key')?.enable();
     this.showAlert('Edit cancelled', 'success');
@@ -483,18 +562,27 @@ export class App implements OnInit, OnDestroy {
       return;
     }
 
-    if (confirm(`Are you sure you want to delete the feature '${feature.key}'?`)) {
-      this.yaftService.deleteFeature(feature.key, feature.secret)
+    if (
+      confirm(`Are you sure you want to delete the feature '${feature.key}'?`)
+    ) {
+      this.yaftService
+        .deleteFeature(feature.key, feature.secret)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            this.showAlert(`Feature '${feature.key}' deleted successfully`, 'success');
-            
+            this.showAlert(
+              `Feature '${feature.key}' deleted successfully`,
+              'success',
+            );
+
             // WebSocket notifications not implemented in Go backend
           },
           error: (error) => {
-            this.showAlert(`Failed to delete feature: ${error.message}`, 'error');
-          }
+            this.showAlert(
+              `Failed to delete feature: ${error.message}`,
+              'error',
+            );
+          },
         });
     }
   }
@@ -506,38 +594,45 @@ export class App implements OnInit, OnDestroy {
     }
   }
 
-
   // Export/Import methods
   onExportJson(): void {
-    const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
+    const features =
+      this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
     const exportData = this.formatFeaturesForExport(features);
-    
+
     if (this.isBooleanProvider && !Array.isArray(exportData)) {
       this.exportService.exportBooleanJson(exportData);
     } else {
       this.exportService.exportToJson(features);
     }
-    
-    this.errorHandler.showSuccessNotification(`Exported ${features.length} features to JSON`);
+
+    this.errorHandler.showSuccessNotification(
+      `Exported ${features.length} features to JSON`,
+    );
   }
 
   onExportCsv(): void {
-    const features = this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
-    
+    const features =
+      this.filteredFeatures.length > 0 ? this.filteredFeatures : this.features;
+
     if (this.isBooleanProvider) {
       this.exportService.exportBooleanCsv(features);
     } else {
       this.exportService.exportToCsv(features);
     }
-    
-    this.errorHandler.showSuccessNotification(`Exported ${features.length} features to CSV`);
+
+    this.errorHandler.showSuccessNotification(
+      `Exported ${features.length} features to CSV`,
+    );
   }
 
-  private formatFeaturesForExport(features: Feature[]): Record<string, boolean> | Feature[] {
+  private formatFeaturesForExport(
+    features: Feature[],
+  ): Record<string, boolean> | Feature[] {
     if (this.isBooleanProvider) {
       // For boolean providers, export as simple key-value object
       const booleanData: Record<string, boolean> = {};
-      features.forEach(feature => {
+      features.forEach((feature) => {
         booleanData[feature.key] = feature.value === 'true';
       });
       return booleanData;
@@ -548,7 +643,7 @@ export class App implements OnInit, OnDestroy {
   onImportFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    
+
     if (file) {
       this.processImportFile(file);
       // Clear the input
@@ -570,29 +665,30 @@ export class App implements OnInit, OnDestroy {
   private processImportFile(file: File): void {
     this.errorHandler.showInfoNotification('Importing features...');
 
-    this.exportService.importFromFile(file).then(result => {
+    this.exportService.importFromFile(file).then((result) => {
       if (result.success) {
         const data: ImportPreviewDialogData = {
           features: result.features,
           warnings: result.warnings,
-          existingFeatures: this.features
+          existingFeatures: this.features,
         };
 
         const dialogRef = this.dialog.open(ImportPreviewDialogComponent, {
           data,
-          autoFocus: false
+          autoFocus: false,
         });
 
-        dialogRef.afterClosed()
+        dialogRef
+          .afterClosed()
           .pipe(takeUntil(this.destroy$))
-          .subscribe(confirmed => {
+          .subscribe((confirmed) => {
             if (confirmed) {
               this.importFeatures(result.features);
             }
           });
       } else {
         this.errorHandler.showErrorNotification(
-          `Import failed: ${result.errors.join(', ')}`
+          `Import failed: ${result.errors.join(', ')}`,
         );
       }
     });
@@ -608,20 +704,21 @@ export class App implements OnInit, OnDestroy {
         // All done
         if (importedCount > 0) {
           this.errorHandler.showSuccessNotification(
-            `Successfully imported ${importedCount} features`
+            `Successfully imported ${importedCount} features`,
           );
           this.onRefresh();
         }
         if (errors.length > 0) {
           this.errorHandler.showErrorNotification(
-            `Failed to import ${errors.length} features`
+            `Failed to import ${errors.length} features`,
           );
         }
         return;
       }
 
       const feature = features[index];
-      this.yaftService.createFeature(feature)
+      this.yaftService
+        .createFeature(feature)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
@@ -631,7 +728,7 @@ export class App implements OnInit, OnDestroy {
           error: (error) => {
             errors.push(`${feature.key}: ${error.message}`);
             importNext(index + 1);
-          }
+          },
         });
     };
 
@@ -654,14 +751,15 @@ export class App implements OnInit, OnDestroy {
     return null;
   }
 
-
   // Bulk Operations Methods
   toggleAllSelection(): void {
     if (this.isAllSelected) {
       this.selectedFeatures.clear();
     } else {
-      const operableFeatures = this.bulkOperationsService.getOperableFeatures(this.filteredFeatures);
-      operableFeatures.forEach(feature => this.selectedFeatures.add(feature));
+      const operableFeatures = this.bulkOperationsService.getOperableFeatures(
+        this.filteredFeatures,
+      );
+      operableFeatures.forEach((feature) => this.selectedFeatures.add(feature));
     }
     this.updateSelectionState();
   }
@@ -680,9 +778,12 @@ export class App implements OnInit, OnDestroy {
   }
 
   updateSelectionState(): void {
-    const operableFeatures = this.bulkOperationsService.getOperableFeatures(this.filteredFeatures);
-    this.isAllSelected = operableFeatures.length > 0 && 
-                        operableFeatures.every(feature => this.selectedFeatures.has(feature));
+    const operableFeatures = this.bulkOperationsService.getOperableFeatures(
+      this.filteredFeatures,
+    );
+    this.isAllSelected =
+      operableFeatures.length > 0 &&
+      operableFeatures.every((feature) => this.selectedFeatures.has(feature));
   }
 
   getSelectedCount(): number {
@@ -704,9 +805,9 @@ export class App implements OnInit, OnDestroy {
 
   onBulkDelete(): void {
     const confirmed = confirm(
-      `Are you sure you want to delete ${this.selectedFeatures.size} selected features? This action cannot be undone.`
+      `Are you sure you want to delete ${this.selectedFeatures.size} selected features? This action cannot be undone.`,
     );
-    
+
     if (confirmed) {
       this.performBulkOperation('delete', 'Deleting features...');
     }
@@ -717,8 +818,10 @@ export class App implements OnInit, OnDestroy {
     this.bulkOperationsService.exportFeatures(selectedArray);
   }
 
-
-  private performBulkOperation(operation: 'enable' | 'disable' | 'delete', loadingMessage: string): void {
+  private performBulkOperation(
+    operation: 'enable' | 'disable' | 'delete',
+    loadingMessage: string,
+  ): void {
     this.isBulkOperating = true;
     this.errorHandler.showInfoNotification(loadingMessage);
 
@@ -727,47 +830,49 @@ export class App implements OnInit, OnDestroy {
 
     switch (operation) {
       case 'enable':
-        operationObservable = this.bulkOperationsService.enableFeatures(selectedArray);
+        operationObservable =
+          this.bulkOperationsService.enableFeatures(selectedArray);
         break;
       case 'disable':
-        operationObservable = this.bulkOperationsService.disableFeatures(selectedArray);
+        operationObservable =
+          this.bulkOperationsService.disableFeatures(selectedArray);
         break;
       case 'delete':
-        operationObservable = this.bulkOperationsService.deleteFeatures(selectedArray);
+        operationObservable =
+          this.bulkOperationsService.deleteFeatures(selectedArray);
         break;
     }
 
-    operationObservable
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (result) => {
-          this.isBulkOperating = false;
-          
-          if (result.success > 0) {
-            this.errorHandler.showSuccessNotification(
-              `Successfully ${operation}d ${result.success} features`
-            );
-          }
-          
-          if (result.failed > 0) {
-            this.errorHandler.showWarningNotification(
-              `Failed to ${operation} ${result.failed} features`
-            );
-            console.warn('Bulk operation errors:', result.errors);
-          }
+    operationObservable.pipe(takeUntil(this.destroy$)).subscribe({
+      next: (result) => {
+        this.isBulkOperating = false;
 
-          // Clear selection and refresh
-          this.selectedFeatures.clear();
-          this.updateSelectionState();
-          this.onRefresh();
-        },
-        error: (error) => {
-          this.isBulkOperating = false;
-          this.errorHandler.showErrorNotification(`Bulk ${operation} operation failed: ${error.message}`);
+        if (result.success > 0) {
+          this.errorHandler.showSuccessNotification(
+            `Successfully ${operation}d ${result.success} features`,
+          );
         }
-      });
-  }
 
+        if (result.failed > 0) {
+          this.errorHandler.showWarningNotification(
+            `Failed to ${operation} ${result.failed} features`,
+          );
+          console.warn('Bulk operation errors:', result.errors);
+        }
+
+        // Clear selection and refresh
+        this.selectedFeatures.clear();
+        this.updateSelectionState();
+        this.onRefresh();
+      },
+      error: (error) => {
+        this.isBulkOperating = false;
+        this.errorHandler.showErrorNotification(
+          `Bulk ${operation} operation failed: ${error.message}`,
+        );
+      },
+    });
+  }
 
   // Helper method to check if a feature can be selected for bulk operations
   canSelectFeature(feature: FeatureWithSecret): boolean {
@@ -794,16 +899,19 @@ export class App implements OnInit, OnDestroy {
 
   addTag(event: MatChipInputEvent): void {
     const value = (event.input?.value || '').trim();
-    
+
     if (value) {
       // Validate tag format: lowercase, alphanumeric, hyphens only
       const tagPattern = /^[a-z0-9-]+$/;
       if (!tagPattern.test(value)) {
-        this.showAlert('Tags must be lowercase, alphanumeric, and hyphens only', 'error');
+        this.showAlert(
+          'Tags must be lowercase, alphanumeric, and hyphens only',
+          'error',
+        );
         event.input.value = '';
         return;
       }
-      
+
       // Check for duplicates
       const currentTags = this.getTags();
       if (currentTags.includes(value)) {
@@ -811,14 +919,14 @@ export class App implements OnInit, OnDestroy {
         event.input.value = '';
         return;
       }
-      
+
       // Check maximum tags limit
       if (currentTags.length >= 10) {
         this.showAlert('Maximum 10 tags allowed per feature', 'error');
         event.input.value = '';
         return;
       }
-      
+
       // Add the tag
       const updatedTags = [...currentTags, value];
       this.featureForm.get('tags')?.setValue(updatedTags);
@@ -832,14 +940,14 @@ export class App implements OnInit, OnDestroy {
 
   removeTag(tagToRemove: string): void {
     const currentTags = this.getTags();
-    const updatedTags = currentTags.filter(tag => tag !== tagToRemove);
+    const updatedTags = currentTags.filter((tag) => tag !== tagToRemove);
     this.featureForm.get('tags')?.setValue(updatedTags);
   }
 
   private showAlert(message: string, type: 'success' | 'error') {
     this.alertMessage = message;
     this.alertType = type;
-    
+
     // Auto-clear after different durations based on type
     const duration = message.includes('redirecting') ? 2000 : 5000;
     setTimeout(() => this.clearAlert(), duration);

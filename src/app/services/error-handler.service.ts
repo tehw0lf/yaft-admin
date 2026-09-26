@@ -10,7 +10,7 @@ export interface RetryConfig {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ErrorHandlerService implements ErrorHandler {
   private snackBar = inject(MatSnackBar);
@@ -18,20 +18,20 @@ export class ErrorHandlerService implements ErrorHandler {
   private readonly defaultRetryConfig: RetryConfig = {
     maxRetries: 3,
     delayMs: 1000,
-    backoffMultiplier: 2
+    backoffMultiplier: 2,
   };
 
   handleError(error: any): void {
     console.error('Global error handler:', error);
-    
+
     let message = 'An unexpected error occurred';
-    
+
     if (error instanceof HttpErrorResponse) {
       message = this.getHttpErrorMessage(error);
     } else if (error?.message) {
       message = error.message;
     }
-    
+
     this.showErrorNotification(message);
   }
 
@@ -40,7 +40,7 @@ export class ErrorHandlerService implements ErrorHandler {
       duration,
       panelClass: ['error-snackbar'],
       horizontalPosition: 'right',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 
@@ -49,7 +49,7 @@ export class ErrorHandlerService implements ErrorHandler {
       duration,
       panelClass: ['success-snackbar'],
       horizontalPosition: 'right',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 
@@ -58,7 +58,7 @@ export class ErrorHandlerService implements ErrorHandler {
       duration,
       panelClass: ['warning-snackbar'],
       horizontalPosition: 'right',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 
@@ -67,42 +67,49 @@ export class ErrorHandlerService implements ErrorHandler {
       duration,
       panelClass: ['info-snackbar'],
       horizontalPosition: 'right',
-      verticalPosition: 'top'
+      verticalPosition: 'top',
     });
   }
 
   retryOperation<T>(
     operation: () => Observable<T>,
-    config: Partial<RetryConfig> = {}
+    config: Partial<RetryConfig> = {},
   ): Observable<T> {
     const finalConfig = { ...this.defaultRetryConfig, ...config };
-    
-    return new Observable<T>(observer => {
+
+    return new Observable<T>((observer) => {
       let attempt = 0;
-      
+
       const tryOperation = () => {
         operation().subscribe({
-          next: value => observer.next(value),
+          next: (value) => observer.next(value),
           complete: () => observer.complete(),
-          error: error => {
+          error: (error) => {
             attempt++;
-            
+
             if (attempt <= finalConfig.maxRetries) {
-              const delay = finalConfig.delayMs * Math.pow(finalConfig.backoffMultiplier, attempt - 1);
-              
-              console.log(`Retry attempt ${attempt}/${finalConfig.maxRetries} in ${delay}ms`);
-              
+              const delay =
+                finalConfig.delayMs *
+                Math.pow(finalConfig.backoffMultiplier, attempt - 1);
+
+              console.log(
+                `Retry attempt ${attempt}/${finalConfig.maxRetries} in ${delay}ms`,
+              );
+
               timer(delay).subscribe(() => tryOperation());
             } else {
               // Rationale: interpolated values are internal retry config numbers, not user input. JS template literals are not printf-style format strings.
               // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
-              console.error(`Operation failed after ${finalConfig.maxRetries} retries:`, error);
+              console.error(
+                `Operation failed after ${finalConfig.maxRetries} retries:`,
+                error,
+              );
               observer.error(error);
             }
-          }
+          },
         });
       };
-      
+
       tryOperation();
     });
   }
@@ -111,7 +118,7 @@ export class ErrorHandlerService implements ErrorHandler {
     if (error.status === 0) {
       return 'Network error: Please check your internet connection';
     }
-    
+
     if (error.status >= 400 && error.status < 500) {
       switch (error.status) {
         case 400:
@@ -119,18 +126,20 @@ export class ErrorHandlerService implements ErrorHandler {
         case 401:
           return 'Unauthorized: Please check your credentials';
         case 403:
-          return 'Forbidden: You don\'t have permission to perform this action';
+          return "Forbidden: You don't have permission to perform this action";
         case 404:
           return 'Not found: The requested resource was not found';
         case 409:
           return error.error?.message || 'Conflict: Resource already exists';
         case 422:
-          return error.error?.message || 'Validation error: Please check your input';
+          return (
+            error.error?.message || 'Validation error: Please check your input'
+          );
         default:
           return error.error?.message || `Client error (${error.status})`;
       }
     }
-    
+
     if (error.status >= 500) {
       switch (error.status) {
         case 500:
@@ -145,7 +154,7 @@ export class ErrorHandlerService implements ErrorHandler {
           return `Server error (${error.status})`;
       }
     }
-    
+
     return error.error?.message || error.message || 'An unknown error occurred';
   }
 
@@ -157,30 +166,31 @@ export class ErrorHandlerService implements ErrorHandler {
       successMessage?: string;
       errorMessage?: string;
       retryConfig?: Partial<RetryConfig>;
-    } = {}
+    } = {},
   ): Observable<T> {
     if (options.loadingMessage) {
       this.showInfoNotification(options.loadingMessage);
     }
 
-    const operationWithRetry = options.retryConfig 
+    const operationWithRetry = options.retryConfig
       ? this.retryOperation(operation, options.retryConfig)
       : operation();
 
-    return new Observable<T>(observer => {
+    return new Observable<T>((observer) => {
       operationWithRetry.subscribe({
-        next: value => {
+        next: (value) => {
           if (options.successMessage) {
             this.showSuccessNotification(options.successMessage);
           }
           observer.next(value);
         },
         complete: () => observer.complete(),
-        error: error => {
-          const message = options.errorMessage || this.getHttpErrorMessage(error);
+        error: (error) => {
+          const message =
+            options.errorMessage || this.getHttpErrorMessage(error);
           this.showErrorNotification(message);
           observer.error(error);
-        }
+        },
       });
     });
   }
@@ -190,7 +200,6 @@ export class ErrorHandlerService implements ErrorHandler {
 @Injectable()
 export class GlobalErrorHandler implements ErrorHandler {
   private errorHandlerService = inject(ErrorHandlerService);
-
 
   handleError(error: any): void {
     this.errorHandlerService.handleError(error);

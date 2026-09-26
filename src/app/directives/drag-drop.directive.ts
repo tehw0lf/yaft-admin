@@ -1,8 +1,14 @@
-import { Directive, EventEmitter, HostBinding, HostListener, Output } from '@angular/core';
+import {
+  Directive,
+  EventEmitter,
+  HostBinding,
+  HostListener,
+  Output,
+} from '@angular/core';
 
 @Directive({
   selector: '[appDragDrop]',
-  standalone: true
+  standalone: true,
 })
 export class DragDropDirective {
   @Output() filesDropped = new EventEmitter<FileList>();
@@ -23,11 +29,11 @@ export class DragDropDirective {
   onDragLeave(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    
+
     // Only set to false if we're actually leaving the element
     const target = event.currentTarget as HTMLElement;
     const relatedTarget = event.relatedTarget as HTMLElement;
-    
+
     if (!target.contains(relatedTarget)) {
       this.isDraggedOver = false;
       this.dragOver.emit(false);
@@ -38,10 +44,10 @@ export class DragDropDirective {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    
+
     this.isDraggedOver = false;
     this.dragOver.emit(false);
-    
+
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
       // Validate file types (JSON and CSV only)
@@ -52,7 +58,7 @@ export class DragDropDirective {
           validFiles.push(file);
         }
       }
-      
+
       if (validFiles.length > 0) {
         // Convert to FileList-like object
         const fileList = this.createFileList(validFiles);
@@ -64,15 +70,17 @@ export class DragDropDirective {
   private isValidFileType(file: File): boolean {
     const allowedTypes = ['.json', '.csv'];
     const fileName = file.name.toLowerCase();
-    return allowedTypes.some(type => fileName.endsWith(type)) || 
-           file.type === 'application/json' || 
-           file.type === 'text/csv' ||
-           file.type === 'application/csv';
+    return (
+      allowedTypes.some((type) => fileName.endsWith(type)) ||
+      file.type === 'application/json' ||
+      file.type === 'text/csv' ||
+      file.type === 'application/csv'
+    );
   }
 
   private createFileList(files: File[]): FileList {
     const dt = new DataTransfer();
-    files.forEach(file => dt.items.add(file));
+    files.forEach((file) => dt.items.add(file));
     return dt.files;
   }
 }

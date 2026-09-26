@@ -61,9 +61,9 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         description: 'Name of the feature',
         required: true,
         placeholder: 'my-feature',
-        pattern: '^[a-z0-9-_]+$'
-      }
-    ]
+        pattern: '^[a-z0-9-_]+$',
+      },
+    ],
   },
   {
     id: 'scheduled-release',
@@ -83,22 +83,22 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         type: 'text',
         description: 'Name of the feature',
         required: true,
-        placeholder: 'new-dashboard'
+        placeholder: 'new-dashboard',
       },
       {
         name: 'release_version',
         type: 'text',
         description: 'Release version',
         required: true,
-        placeholder: 'v2.1'
+        placeholder: 'v2.1',
       },
       {
         name: 'activation_date',
         type: 'date',
         description: 'When to activate the feature',
-        required: true
-      }
-    ]
+        required: true,
+      },
+    ],
   },
   {
     id: 'ab-test',
@@ -118,16 +118,16 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         type: 'text',
         description: 'Name of the experiment',
         required: true,
-        placeholder: 'checkout-flow'
+        placeholder: 'checkout-flow',
       },
       {
         name: 'test_percentage',
         type: 'number',
         description: 'Percentage of users in test',
         defaultValue: 50,
-        required: true
-      }
-    ]
+        required: true,
+      },
+    ],
   },
   {
     id: 'beta-feature',
@@ -147,7 +147,7 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         type: 'text',
         description: 'Name of the beta feature',
         required: true,
-        placeholder: 'new-editor'
+        placeholder: 'new-editor',
       },
       {
         name: 'beta_group',
@@ -155,9 +155,9 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         description: 'Beta group',
         required: true,
         options: ['internal', 'closed-beta', 'open-beta'],
-        defaultValue: 'closed-beta'
-      }
-    ]
+        defaultValue: 'closed-beta',
+      },
+    ],
   },
   {
     id: 'maintenance-mode',
@@ -178,21 +178,21 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         description: 'Service to put in maintenance',
         required: true,
         options: ['api', 'frontend', 'database', 'all'],
-        defaultValue: 'all'
+        defaultValue: 'all',
       },
       {
         name: 'maintenance_start',
         type: 'date',
         description: 'Maintenance start time',
-        required: false
+        required: false,
       },
       {
         name: 'maintenance_end',
         type: 'date',
         description: 'Expected maintenance end time',
-        required: false
-      }
-    ]
+        required: false,
+      },
+    ],
   },
   {
     id: 'gradual-rollout',
@@ -212,24 +212,24 @@ export const BUILT_IN_TEMPLATES: FeatureTemplate[] = [
         type: 'text',
         description: 'Name of the feature',
         required: true,
-        placeholder: 'new-checkout'
+        placeholder: 'new-checkout',
       },
       {
         name: 'initial_percentage',
         type: 'number',
         description: 'Initial rollout percentage',
         defaultValue: 5,
-        required: true
+        required: true,
       },
       {
         name: 'rollout_duration',
         type: 'number',
         description: 'Rollout duration in days',
         defaultValue: 7,
-        required: true
-      }
-    ]
-  }
+        required: true,
+      },
+    ],
+  },
 ];
 
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
@@ -237,36 +237,38 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     name: 'Basic',
     description: 'Simple feature toggles for everyday use',
     icon: 'toggle_on',
-    templates: BUILT_IN_TEMPLATES.filter(t => t.category === 'Basic')
+    templates: BUILT_IN_TEMPLATES.filter((t) => t.category === 'Basic'),
   },
   {
     name: 'Scheduling',
     description: 'Time-based feature activation and scheduling',
     icon: 'schedule',
-    templates: BUILT_IN_TEMPLATES.filter(t => t.category === 'Scheduling')
+    templates: BUILT_IN_TEMPLATES.filter((t) => t.category === 'Scheduling'),
   },
   {
     name: 'Experimentation',
     description: 'A/B testing and experimental features',
     icon: 'science',
-    templates: BUILT_IN_TEMPLATES.filter(t => t.category === 'Experimentation')
+    templates: BUILT_IN_TEMPLATES.filter(
+      (t) => t.category === 'Experimentation',
+    ),
   },
   {
     name: 'Beta',
     description: 'Beta and preview features',
     icon: 'preview',
-    templates: BUILT_IN_TEMPLATES.filter(t => t.category === 'Beta')
+    templates: BUILT_IN_TEMPLATES.filter((t) => t.category === 'Beta'),
   },
   {
     name: 'Operations',
     description: 'Operational and maintenance toggles',
     icon: 'build',
-    templates: BUILT_IN_TEMPLATES.filter(t => t.category === 'Operations')
+    templates: BUILT_IN_TEMPLATES.filter((t) => t.category === 'Operations'),
   },
   {
     name: 'Rollout',
     description: 'Gradual rollout and deployment features',
     icon: 'trending_up',
-    templates: BUILT_IN_TEMPLATES.filter(t => t.category === 'Rollout')
-  }
+    templates: BUILT_IN_TEMPLATES.filter((t) => t.category === 'Rollout'),
+  },
 ];

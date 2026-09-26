@@ -15,7 +15,7 @@ name: Security Monitoring
 on:
   schedule:
     # Run daily at 2:00 AM UTC
-    - cron: "0 2 * * *"
+    - cron: '0 2 * * *'
   workflow_dispatch:
     # Allow manual triggering
 
@@ -36,10 +36,10 @@ jobs:
       actions: read
       pull-requests: write
     with:
-      tool: "npm"
-      semgrep_rules: "auto p/security-audit p/owasp-top-ten p/ci p/nodejs p/typescript"
+      tool: 'npm'
+      semgrep_rules: 'auto p/security-audit p/owasp-top-ten p/ci p/nodejs p/typescript'
       npm_audit_omit_dev: true
-      npm_audit_severity_threshold: "high"
+      npm_audit_severity_threshold: 'high'
 
   # Download artifacts from latest CI build
   # Note: Reuses artifacts from the main CI workflow instead of rebuilding
@@ -75,5 +75,5 @@ jobs:
       security-events: write
       actions: read
     with:
-      tool: "npm"
-      artifact_path: "dist"
+      tool: 'npm'
+      artifact_path: 'dist'

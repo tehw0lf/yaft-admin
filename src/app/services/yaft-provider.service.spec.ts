@@ -79,7 +79,7 @@ describe('YaftProviderService', () => {
         done();
       });
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/existing-uuid'
+        'http://localhost:8080/features/existing-uuid',
       );
       expect(req.request.method).toBe('GET');
       req.flush(mockResponse);
@@ -95,13 +95,13 @@ describe('YaftProviderService', () => {
         next: () => fail('Should have failed'),
         error: (error) => {
           expect(error.message).toContain(
-            "Collection with UUID 'nonexistent-uuid' not found"
+            "Collection with UUID 'nonexistent-uuid' not found",
           );
           done();
         },
       });
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/nonexistent-uuid'
+        'http://localhost:8080/features/nonexistent-uuid',
       );
       req.flush(null, { status: 404, statusText: 'Not Found' });
     });
@@ -125,7 +125,11 @@ describe('YaftProviderService', () => {
         baseUUID: 'test-uuid',
         isConnected: true,
       };
-      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
+      (
+        service as unknown as {
+          connectionSubject: { next: (c: ProviderConnection) => void };
+        }
+      ).connectionSubject.next(connection);
     });
     it('should load features from API service', (done) => {
       const mockFeatures: Feature[] = [
@@ -144,7 +148,7 @@ describe('YaftProviderService', () => {
         done();
       });
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/test-uuid'
+        'http://localhost:8080/features/test-uuid',
       );
       req.flush({ toggles: mockFeatures });
     });
@@ -158,7 +162,11 @@ describe('YaftProviderService', () => {
         type: ProviderType.LOCAL_STORAGE,
         isConnected: true,
       };
-      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
+      (
+        service as unknown as {
+          connectionSubject: { next: (c: ProviderConnection) => void };
+        }
+      ).connectionSubject.next(connection);
       service.loadFeatures().subscribe((features) => {
         expect(features).toHaveLength(2);
         expect(features[0].key).toBe('feature1');
@@ -175,7 +183,11 @@ describe('YaftProviderService', () => {
         baseUUID: 'test-uuid',
         isConnected: true,
       };
-      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
+      (
+        service as unknown as {
+          connectionSubject: { next: (c: ProviderConnection) => void };
+        }
+      ).connectionSubject.next(connection);
       service.setCollectionSecret('test-secret');
     });
     it('should create feature via API', (done) => {
@@ -213,7 +225,7 @@ describe('YaftProviderService', () => {
           done();
         });
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/activate/test-uuid|feature1/test-secret'
+        'http://localhost:8080/features/activate/test-uuid|feature1/test-secret',
       );
       expect(req.request.method).toBe('PUT');
       req.flush(mockResponse);
@@ -225,7 +237,7 @@ describe('YaftProviderService', () => {
           done();
         });
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/test-uuid|feature1/test-secret'
+        'http://localhost:8080/features/test-uuid|feature1/test-secret',
       );
       expect(req.request.method).toBe('DELETE');
       req.flush({});
@@ -235,7 +247,11 @@ describe('YaftProviderService', () => {
         type: ProviderType.LOCAL_STORAGE,
         isConnected: true,
       };
-      (service as unknown as { connectionSubject: { next: (c: ProviderConnection) => void } }).connectionSubject.next(connection);
+      (
+        service as unknown as {
+          connectionSubject: { next: (c: ProviderConnection) => void };
+        }
+      ).connectionSubject.next(connection);
       const feature: Omit<Feature, 'secret'> = {
         key: 'local-feature',
         value: 'true',
@@ -254,7 +270,7 @@ describe('YaftProviderService', () => {
               const stored = localStorage.getItem('yaft-admin-features');
               const features = stored ? JSON.parse(stored) : [];
               expect(
-                features.find((f: Feature) => f.key === 'local-feature')
+                features.find((f: Feature) => f.key === 'local-feature'),
               ).toBeUndefined();
               expect(step).toBe(2);
               done();
@@ -318,15 +334,21 @@ describe('YaftProviderService', () => {
   });
   describe('Utility Methods', () => {
     it('should extract display key from full key', () => {
-      const servicePrivate = service as unknown as { extractDisplayKey: (key: string | undefined) => string };
+      const servicePrivate = service as unknown as {
+        extractDisplayKey: (key: string | undefined) => string;
+      };
       expect(servicePrivate.extractDisplayKey('uuid|feature-name')).toBe(
-        'feature-name'
+        'feature-name',
       );
       expect(servicePrivate.extractDisplayKey('simple-key')).toBe('simple-key');
-      expect(servicePrivate.extractDisplayKey(undefined)).toBe('unknown-feature');
+      expect(servicePrivate.extractDisplayKey(undefined)).toBe(
+        'unknown-feature',
+      );
     });
     it('should convert object to features array', () => {
-      const servicePrivate = service as unknown as { convertObjectToFeatures: (data: Record<string, unknown>) => Feature[] };
+      const servicePrivate = service as unknown as {
+        convertObjectToFeatures: (data: Record<string, unknown>) => Feature[];
+      };
       const data: Record<string, unknown> = {
         toggle1: true,
         toggle2: false,

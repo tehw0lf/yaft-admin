@@ -115,10 +115,10 @@ describe('Feature Models', () => {
         ProviderType.LOCAL_STORAGE_BOOLEAN,
       ];
       expect(objectProviders.every((type) => !type.includes('boolean'))).toBe(
-        true
+        true,
       );
       expect(booleanProviders.every((type) => type.includes('boolean'))).toBe(
-        true
+        true,
       );
     });
     it('should distinguish between API and local storage providers', () => {
@@ -131,10 +131,10 @@ describe('Feature Models', () => {
         ProviderType.LOCAL_STORAGE_BOOLEAN,
       ];
       expect(apiProviders.every((type) => type.includes('api-service'))).toBe(
-        true
+        true,
       );
       expect(
-        localProviders.every((type) => type.includes('local-storage'))
+        localProviders.every((type) => type.includes('local-storage')),
       ).toBe(true);
     });
   });
