@@ -5,21 +5,21 @@ import {
   TemplateCategory,
   TemplateUsage,
   BUILT_IN_TEMPLATES,
-  TEMPLATE_CATEGORIES
+  TEMPLATE_CATEGORIES,
 } from '../models/template.model';
 import { Feature } from '../models/feature.model';
 import { ErrorHandlerService } from './error-handler.service';
 import { compileSafePattern, isSafePattern } from './safe-pattern';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class TemplateService {
   private errorHandler = inject(ErrorHandlerService);
 
   private templatesSubject = new BehaviorSubject<FeatureTemplate[]>([]);
   private usageHistorySubject = new BehaviorSubject<TemplateUsage[]>([]);
-  
+
   public templates$ = this.templatesSubject.asObservable();
   public usageHistory$ = this.usageHistorySubject.asObservable();
 
@@ -49,8 +49,11 @@ export class TemplateService {
   // Save custom templates to localStorage
   private saveCustomTemplates(): void {
     const allTemplates = this.templatesSubject.value;
-    const customTemplates = allTemplates.filter(t => !t.isBuiltIn);
-    localStorage.setItem('yaft-custom-templates', JSON.stringify(customTemplates));
+    const customTemplates = allTemplates.filter((t) => !t.isBuiltIn);
+    localStorage.setItem(
+      'yaft-custom-templates',
+      JSON.stringify(customTemplates),
+    );
   }
 
   // Load usage history from localStorage
@@ -77,12 +80,12 @@ export class TemplateService {
 
   // Get templates by category
   getTemplatesByCategory(category: string): FeatureTemplate[] {
-    return this.templatesSubject.value.filter(t => t.category === category);
+    return this.templatesSubject.value.filter((t) => t.category === category);
   }
 
   // Get template by ID
   getTemplate(id: string): FeatureTemplate | undefined {
-    return this.templatesSubject.value.find(t => t.id === id);
+    return this.templatesSubject.value.find((t) => t.id === id);
   }
 
   // Get template categories
@@ -91,34 +94,44 @@ export class TemplateService {
   }
 
   // Create new custom template
-  createTemplate(template: Omit<FeatureTemplate, 'id' | 'createdAt' | 'usageCount' | 'isBuiltIn'>): Observable<FeatureTemplate> {
+  createTemplate(
+    template: Omit<
+      FeatureTemplate,
+      'id' | 'createdAt' | 'usageCount' | 'isBuiltIn'
+    >,
+  ): Observable<FeatureTemplate> {
     const newTemplate: FeatureTemplate = {
       ...template,
       id: this.generateTemplateId(),
       createdAt: new Date(),
       usageCount: 0,
-      isBuiltIn: false
+      isBuiltIn: false,
     };
 
     const currentTemplates = this.templatesSubject.value;
     const updatedTemplates = [...currentTemplates, newTemplate];
-    
+
     this.templatesSubject.next(updatedTemplates);
     this.saveCustomTemplates();
-    
-    this.errorHandler.showSuccessNotification(`Template "${newTemplate.name}" created successfully`);
+
+    this.errorHandler.showSuccessNotification(
+      `Template "${newTemplate.name}" created successfully`,
+    );
     return of(newTemplate);
   }
 
   // Update existing template (only custom templates)
-  updateTemplate(id: string, updates: Partial<FeatureTemplate>): Observable<FeatureTemplate> {
+  updateTemplate(
+    id: string,
+    updates: Partial<FeatureTemplate>,
+  ): Observable<FeatureTemplate> {
     const templates = this.templatesSubject.value;
-    const templateIndex = templates.findIndex(t => t.id === id);
-    
+    const templateIndex = templates.findIndex((t) => t.id === id);
+
     if (templateIndex === -1) {
       throw new Error('Template not found');
     }
-    
+
     const template = templates[templateIndex];
     if (template.isBuiltIn) {
       throw new Error('Cannot update built-in templates');
@@ -130,36 +143,40 @@ export class TemplateService {
 
     this.templatesSubject.next(updatedTemplates);
     this.saveCustomTemplates();
-    
-    this.errorHandler.showSuccessNotification(`Template "${updatedTemplate.name}" updated successfully`);
+
+    this.errorHandler.showSuccessNotification(
+      `Template "${updatedTemplate.name}" updated successfully`,
+    );
     return of(updatedTemplate);
   }
 
   // Delete custom template
   deleteTemplate(id: string): Observable<void> {
     const templates = this.templatesSubject.value;
-    const template = templates.find(t => t.id === id);
-    
+    const template = templates.find((t) => t.id === id);
+
     if (!template) {
       throw new Error('Template not found');
     }
-    
+
     if (template.isBuiltIn) {
       throw new Error('Cannot delete built-in templates');
     }
 
-    const updatedTemplates = templates.filter(t => t.id !== id);
+    const updatedTemplates = templates.filter((t) => t.id !== id);
     this.templatesSubject.next(updatedTemplates);
     this.saveCustomTemplates();
-    
-    this.errorHandler.showSuccessNotification(`Template "${template.name}" deleted successfully`);
+
+    this.errorHandler.showSuccessNotification(
+      `Template "${template.name}" deleted successfully`,
+    );
     return of(void 0);
   }
 
   // Create feature from template
   createFeatureFromTemplate(
-    templateId: string, 
-    variables: { [key: string]: string | number | boolean }
+    templateId: string,
+    variables: { [key: string]: string | number | boolean },
   ): Feature {
     const template = this.getTemplate(templateId);
     if (!template) {
@@ -173,13 +190,17 @@ export class TemplateService {
     const feature: Feature = {
       key: processedKey,
       value: template.value,
-      activeAt: variables['activation_date'] ? new Date(String(variables['activation_date'])).toISOString() : template.activeAt,
-      disabledAt: variables['maintenance_end'] ? new Date(String(variables['maintenance_end'])).toISOString() : template.disabledAt
+      activeAt: variables['activation_date']
+        ? new Date(String(variables['activation_date'])).toISOString()
+        : template.activeAt,
+      disabledAt: variables['maintenance_end']
+        ? new Date(String(variables['maintenance_end'])).toISOString()
+        : template.disabledAt,
     };
 
     // Record usage
     this.recordTemplateUsage(templateId, processedKey, variables);
-    
+
     // Increment usage count
     this.incrementUsageCount(templateId);
 
@@ -187,11 +208,14 @@ export class TemplateService {
   }
 
   // Process template string with variables
-  private processTemplate(template: string, variables: { [key: string]: string | number | boolean }): string {
+  private processTemplate(
+    template: string,
+    variables: { [key: string]: string | number | boolean },
+  ): string {
     let result = template;
 
     // Replace {{variable}} patterns
-    Object.keys(variables).forEach(key => {
+    Object.keys(variables).forEach((key) => {
       const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // Rationale: `escapedKey` has all regex metacharacters sanitized above; the surrounding `{{...}}` literals are hardcoded, so the only dynamic part is the sanitized key name. This is not user-controlled regex input.
       // nosemgrep: javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
@@ -203,21 +227,27 @@ export class TemplateService {
   }
 
   // Validate template variables
-  validateTemplateVariables(template: FeatureTemplate, variables: { [key: string]: string | number | boolean }): {
+  validateTemplateVariables(
+    template: FeatureTemplate,
+    variables: { [key: string]: string | number | boolean },
+  ): {
     isValid: boolean;
     errors: string[];
   } {
     const errors: string[] = [];
-    
+
     if (!template.variables) {
       return { isValid: true, errors: [] };
     }
 
-    template.variables.forEach(variable => {
+    template.variables.forEach((variable) => {
       const value = variables[variable.name];
-      
+
       // Check required variables
-      if (variable.required && (value === undefined || value === null || value === '')) {
+      if (
+        variable.required &&
+        (value === undefined || value === null || value === '')
+      ) {
         errors.push(`${variable.description} is required`);
         return;
       }
@@ -234,7 +264,7 @@ export class TemplateService {
             errors.push(`${variable.description} must be a number`);
           }
           break;
-        
+
         case 'date':
           if (!Date.parse(String(value))) {
             errors.push(`${variable.description} must be a valid date`);
@@ -243,7 +273,9 @@ export class TemplateService {
 
         case 'select':
           if (variable.options && !variable.options.includes(String(value))) {
-            errors.push(`${variable.description} must be one of: ${variable.options.join(', ')}`);
+            errors.push(
+              `${variable.description} must be one of: ${variable.options.join(', ')}`,
+            );
           }
           break;
 
@@ -254,7 +286,9 @@ export class TemplateService {
             // try/catch would not help here: ReDoS hangs rather than throws.
             const compiled = compileSafePattern(variable.pattern);
             if (!compiled) {
-              errors.push(`${variable.description} has an invalid validation pattern`);
+              errors.push(
+                `${variable.description} has an invalid validation pattern`,
+              );
             } else if (!compiled.test(String(value))) {
               errors.push(`${variable.description} format is invalid`);
             }
@@ -265,22 +299,26 @@ export class TemplateService {
 
     return {
       isValid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
   // Record template usage
-  private recordTemplateUsage(templateId: string, featureKey: string, variables: { [key: string]: string | number | boolean }): void {
+  private recordTemplateUsage(
+    templateId: string,
+    featureKey: string,
+    variables: { [key: string]: string | number | boolean },
+  ): void {
     const usage: TemplateUsage = {
       templateId,
       featureKey,
       createdAt: new Date(),
-      variables
+      variables,
     };
 
     const currentHistory = this.usageHistorySubject.value;
     const updatedHistory = [usage, ...currentHistory].slice(0, 100); // Keep last 100 usages
-    
+
     this.usageHistorySubject.next(updatedHistory);
     this.saveUsageHistory();
   }
@@ -288,16 +326,19 @@ export class TemplateService {
   // Increment usage count for template
   private incrementUsageCount(templateId: string): void {
     const templates = this.templatesSubject.value;
-    const templateIndex = templates.findIndex(t => t.id === templateId);
-    
+    const templateIndex = templates.findIndex((t) => t.id === templateId);
+
     if (templateIndex !== -1) {
       const template = templates[templateIndex];
-      const updatedTemplate = { ...template, usageCount: template.usageCount + 1 };
+      const updatedTemplate = {
+        ...template,
+        usageCount: template.usageCount + 1,
+      };
       const updatedTemplates = [...templates];
       updatedTemplates[templateIndex] = updatedTemplate;
-      
+
       this.templatesSubject.next(updatedTemplates);
-      
+
       if (!template.isBuiltIn) {
         this.saveCustomTemplates();
       }
@@ -318,29 +359,33 @@ export class TemplateService {
 
   // Export templates
   exportTemplates(): void {
-    const customTemplates = this.templatesSubject.value.filter(t => !t.isBuiltIn);
+    const customTemplates = this.templatesSubject.value.filter(
+      (t) => !t.isBuiltIn,
+    );
     const exportData = {
       version: '1.0',
       timestamp: new Date().toISOString(),
-      templates: customTemplates
+      templates: customTemplates,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
+      type: 'application/json',
     });
 
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `yaft-templates-${new Date().toISOString().split('T')[0]}.json`;
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     window.URL.revokeObjectURL(url);
-    
-    this.errorHandler.showSuccessNotification('Templates exported successfully');
+
+    this.errorHandler.showSuccessNotification(
+      'Templates exported successfully',
+    );
   }
 
   // Import templates
@@ -348,36 +393,42 @@ export class TemplateService {
     try {
       const content = await this.readFileAsText(file);
       const data = JSON.parse(content);
-      
+
       if (!data.templates || !Array.isArray(data.templates)) {
         throw new Error('Invalid template file format');
       }
 
-      const importedTemplates = data.templates.map((t: Partial<FeatureTemplate>) => ({
-        ...t,
-        // Drop validation patterns that could hang the tab via catastrophic
-        // backtracking. Imported files are untrusted, so this is enforced at the
-        // boundary rather than relying on every later consumer to re-check.
-        variables: t.variables?.map(variable =>
-          variable.pattern && !isSafePattern(variable.pattern)
-            ? { ...variable, pattern: undefined }
-            : variable
-        ),
-        id: this.generateTemplateId(), // Generate new IDs to avoid conflicts
-        isBuiltIn: false,
-        createdAt: new Date(),
-        usageCount: 0
-      }));
+      const importedTemplates = data.templates.map(
+        (t: Partial<FeatureTemplate>) => ({
+          ...t,
+          // Drop validation patterns that could hang the tab via catastrophic
+          // backtracking. Imported files are untrusted, so this is enforced at the
+          // boundary rather than relying on every later consumer to re-check.
+          variables: t.variables?.map((variable) =>
+            variable.pattern && !isSafePattern(variable.pattern)
+              ? { ...variable, pattern: undefined }
+              : variable,
+          ),
+          id: this.generateTemplateId(), // Generate new IDs to avoid conflicts
+          isBuiltIn: false,
+          createdAt: new Date(),
+          usageCount: 0,
+        }),
+      );
 
       const currentTemplates = this.templatesSubject.value;
       const updatedTemplates = [...currentTemplates, ...importedTemplates];
-      
+
       this.templatesSubject.next(updatedTemplates);
       this.saveCustomTemplates();
-      
-      this.errorHandler.showSuccessNotification(`Imported ${importedTemplates.length} templates successfully`);
+
+      this.errorHandler.showSuccessNotification(
+        `Imported ${importedTemplates.length} templates successfully`,
+      );
     } catch (error) {
-      this.errorHandler.showErrorNotification(`Failed to import templates: ${error}`);
+      this.errorHandler.showErrorNotification(
+        `Failed to import templates: ${error}`,
+      );
       throw error;
     }
   }
@@ -393,6 +444,8 @@ export class TemplateService {
   }
 
   private generateTemplateId(): string {
-    return 'template-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    return (
+      'template-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+    );
   }
 }

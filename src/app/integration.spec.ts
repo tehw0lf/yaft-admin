@@ -69,7 +69,7 @@ describe('YaFT Admin Integration Tests', () => {
             .updateFeature(
               createdFeature.key,
               { value: 'false' },
-              createdFeature.secret
+              createdFeature.secret,
             )
             .subscribe((updatedFeature) => {
               expect(updatedFeature.value).toBe('false');
@@ -81,13 +81,13 @@ describe('YaFT Admin Integration Tests', () => {
                 });
               // Mock delete request
               const deleteReq = httpMock.expectOne(
-                `http://localhost:8080/features/${createdFeature.key}/${createdFeature.secret}`
+                `http://localhost:8080/features/${createdFeature.key}/${createdFeature.secret}`,
               );
               deleteReq.flush({});
             });
           // Mock update request (deactivate)
           const updateReq = httpMock.expectOne(
-            `http://localhost:8080/features/deactivate/${createdFeature.key}/${createdFeature.secret}`
+            `http://localhost:8080/features/deactivate/${createdFeature.key}/${createdFeature.secret}`,
           );
           updateReq.flush({ key: createdFeature.key, value: 'false' });
         });
@@ -135,7 +135,7 @@ describe('YaFT Admin Integration Tests', () => {
       });
       // Mock connection to existing collection
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/existing-uuid'
+        'http://localhost:8080/features/existing-uuid',
       );
       req.flush({ toggles: existingFeatures });
     });
@@ -167,17 +167,21 @@ describe('YaFT Admin Integration Tests', () => {
               expect(stored).toBeTruthy();
               const features = JSON.parse(stored ?? '[]');
               expect(
-                features.find((f: Feature) => f.key === 'local-test')?.value
+                features.find((f: Feature) => f.key === 'local-test')?.value,
               ).toBe('false');
               // Delete feature
               yaftService.deleteFeature('local-test').subscribe(() => {
                 // Verify feature removed from localStorage
                 const storedAfterDelete = localStorage.getItem(
-                  'yaft-admin-features'
+                  'yaft-admin-features',
                 );
-                const featuresAfterDelete = JSON.parse(storedAfterDelete ?? '[]');
+                const featuresAfterDelete = JSON.parse(
+                  storedAfterDelete ?? '[]',
+                );
                 expect(
-                  featuresAfterDelete.find((f: Feature) => f.key === 'local-test')
+                  featuresAfterDelete.find(
+                    (f: Feature) => f.key === 'local-test',
+                  ),
                 ).toBeUndefined();
                 done();
               });
@@ -192,7 +196,7 @@ describe('YaFT Admin Integration Tests', () => {
       ];
       localStorage.setItem(
         'yaft-admin-features',
-        JSON.stringify(existingFeatures)
+        JSON.stringify(existingFeatures),
       );
       const connection: ProviderConnection = {
         type: ProviderType.LOCAL_STORAGE,
@@ -283,13 +287,13 @@ describe('YaFT Admin Integration Tests', () => {
         next: () => fail('Should have failed'),
         error: (error) => {
           expect(error.message).toContain(
-            "Collection with UUID 'nonexistent' not found"
+            "Collection with UUID 'nonexistent' not found",
           );
           done();
         },
       });
       const req = httpMock.expectOne(
-        'http://localhost:8080/features/nonexistent'
+        'http://localhost:8080/features/nonexistent',
       );
       req.flush(null, { status: 404, statusText: 'Not Found' });
     });
@@ -317,7 +321,9 @@ describe('YaFT Admin Integration Tests', () => {
         toggle2: false,
         toggle3: true,
       };
-      const service = yaftService as unknown as { convertObjectToFeatures: (data: Record<string, unknown>) => Feature[] };
+      const service = yaftService as unknown as {
+        convertObjectToFeatures: (data: Record<string, unknown>) => Feature[];
+      };
       const features = service.convertObjectToFeatures(booleanData);
       expect(features).toHaveLength(3);
       expect(features[0].key).toBe('toggle1');
@@ -335,7 +341,9 @@ describe('YaFT Admin Integration Tests', () => {
           activeAt: '2024-01-01T00:00:00Z',
         },
       };
-      const service = yaftService as unknown as { convertObjectToFeatures: (data: Record<string, unknown>) => Feature[] };
+      const service = yaftService as unknown as {
+        convertObjectToFeatures: (data: Record<string, unknown>) => Feature[];
+      };
       const features = service.convertObjectToFeatures(mixedData);
       expect(features).toHaveLength(2);
       expect(features[0].key).toBe('simple');

@@ -4,7 +4,7 @@ import { Feature, FeatureFilter } from '../models/feature.model';
 import { YaftProviderService } from './yaft-provider.service';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class FilterService {
   private yaftService = inject(YaftProviderService);
@@ -15,8 +15,8 @@ export class FilterService {
     tags: [],
     dateRange: {
       start: null,
-      end: null
-    }
+      end: null,
+    },
   });
 
   public filter$ = this.filterSubject.asObservable();
@@ -26,17 +26,15 @@ export class FilterService {
     // Combine features and filter to create filtered results
     this.filteredFeatures$ = combineLatest([
       this.yaftService.features$,
-      this.filter$
-    ]).pipe(
-      map(([features, filter]) => this.applyFilter(features, filter))
-    );
+      this.filter$,
+    ]).pipe(map(([features, filter]) => this.applyFilter(features, filter)));
   }
 
   updateFilter(filter: Partial<FeatureFilter>): void {
     const currentFilter = this.filterSubject.value;
     this.filterSubject.next({
       ...currentFilter,
-      ...filter
+      ...filter,
     });
   }
 
@@ -47,8 +45,8 @@ export class FilterService {
       tags: [],
       dateRange: {
         start: null,
-        end: null
-      }
+        end: null,
+      },
     });
   }
 
@@ -57,12 +55,12 @@ export class FilterService {
   }
 
   private applyFilter(features: Feature[], filter: FeatureFilter): Feature[] {
-    return features.filter(feature => {
+    return features.filter((feature) => {
       // Text search filter
       if (filter.searchText) {
         const searchText = filter.searchText.toLowerCase();
         const matchesKey = feature.key.toLowerCase().includes(searchText);
-        
+
         if (!matchesKey) {
           return false;
         }
@@ -80,8 +78,8 @@ export class FilterService {
       if (filter.tags.length > 0) {
         const featureTags = feature.tags || [];
         // Check if feature has any of the selected tags
-        const hasMatchingTag = filter.tags.some(filterTag => 
-          featureTags.includes(filterTag)
+        const hasMatchingTag = filter.tags.some((filterTag) =>
+          featureTags.includes(filterTag),
         );
         if (!hasMatchingTag) {
           return false;
@@ -91,19 +89,21 @@ export class FilterService {
       // Date range filter
       if (filter.dateRange.start || filter.dateRange.end) {
         const activeDate = feature.activeAt ? new Date(feature.activeAt) : null;
-        const disabledDate = feature.disabledAt ? new Date(feature.disabledAt) : null;
-        
+        const disabledDate = feature.disabledAt
+          ? new Date(feature.disabledAt)
+          : null;
+
         // Check if feature falls within date range
         let withinRange = false;
-        
+
         if (activeDate) {
           withinRange = this.isDateInRange(activeDate, filter.dateRange);
         }
-        
+
         if (!withinRange && disabledDate) {
           withinRange = this.isDateInRange(disabledDate, filter.dateRange);
         }
-        
+
         if (!withinRange) {
           return false;
         }
@@ -113,7 +113,10 @@ export class FilterService {
     });
   }
 
-  private isDateInRange(date: Date, range: { start: Date | null; end: Date | null }): boolean {
+  private isDateInRange(
+    date: Date,
+    range: { start: Date | null; end: Date | null },
+  ): boolean {
     if (range.start && date < range.start) {
       return false;
     }
@@ -122,5 +125,4 @@ export class FilterService {
     }
     return true;
   }
-
 }

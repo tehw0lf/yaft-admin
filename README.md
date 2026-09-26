@@ -38,7 +38,7 @@ npm install
 npm start
 ```
 
-Open your browser to `http://localhost:4200` to access the admin interface.
+Open your browser to `http://localhost:4214` to access the admin interface.
 
 ### Production Build
 
@@ -58,10 +58,12 @@ python -m http.server 8080
 Connect to a full YaFT Go backend that supports Feature objects with time-based scheduling.
 
 **Configuration:**
+
 - **API Base URL**: `http://localhost:8080` (your YaFT API endpoint)
 - **Base UUID**: Optional UUID for collection-based feature management
 
 **Features:**
+
 - Full CRUD operations with secrets
 - Time-based activation/deactivation
 - Collection hash for efficient caching
@@ -72,10 +74,12 @@ Connect to a full YaFT Go backend that supports Feature objects with time-based 
 Connect to a simplified YaFT API that only handles boolean values.
 
 **Configuration:**
+
 - **API Base URL**: Your simplified YaFT API endpoint
 - **Base UUID**: Optional UUID for feature grouping
 
 **Features:**
+
 - Basic enable/disable operations
 - Lightweight API communication
 - Simple boolean toggle management
@@ -85,9 +89,11 @@ Connect to a simplified YaFT API that only handles boolean values.
 Store feature toggles in browser localStorage with full Feature object support.
 
 **Configuration:**
+
 - **Configuration Path**: Reference path for documentation (e.g., `./config.json`)
 
 **Features:**
+
 - Client-side feature management
 - Full Feature object support
 - Persistent browser storage
@@ -98,9 +104,11 @@ Store feature toggles in browser localStorage with full Feature object support.
 Simplified localStorage provider for basic boolean feature flags.
 
 **Configuration:**
+
 - **Configuration Path**: Reference path for configuration structure
 
 **Features:**
+
 - Simple boolean toggles
 - Browser persistence
 - Lightweight client-side management
@@ -121,6 +129,7 @@ Simplified localStorage provider for basic boolean feature flags.
 Once connected, you can:
 
 #### Create New Features
+
 - Enter a unique feature key (e.g., `dark-mode`, `beta-features`)
 - Set initial value (enabled/disabled)
 - Optionally schedule activation/deactivation times
@@ -128,6 +137,7 @@ Once connected, you can:
 - **Important**: Save the secret provided for API-created features!
 
 #### View and Filter Features
+
 - Browse all features in the sortable table
 - View status indicators:
   - 🟢 **Active**: Feature is currently enabled
@@ -135,11 +145,13 @@ Once connected, you can:
   - 🟡 **Scheduled**: Feature has future activation/deactivation scheduled
 
 #### Toggle Features
+
 - Use the slide toggle to quickly enable/disable features
 - Changes apply immediately (requires secret for API providers)
 - Status updates reflect in real-time
 
 #### Advanced Operations
+
 - **Edit**: Load feature data into the create form for modification
 - **Delete**: Permanently remove features (with confirmation)
 - **Copy Secret**: Copy feature secret to clipboard for external use
@@ -168,7 +180,7 @@ Schedule automatic feature activation/deactivation:
 
 ```bash
 # Development server
-npm start                    # Start dev server on port 4200
+npm start                    # Start dev server on port 4214
 nx serve yaft-admin          # Alternative serve command
 
 # Building
@@ -255,6 +267,7 @@ For production deployments, consider:
 ### With YaFT Go Backend
 
 1. Start your YaFT Go API server:
+
    ```bash
    cd /path/to/yaft-go
    DB_DSN="your-postgres-connection" go run main.go
@@ -349,6 +362,7 @@ MIT License - see LICENSE file for details.
 ## Changelog
 
 ### v1.0.0
+
 - Initial release with multi-provider support
 - Angular Material UI with stepper workflow
 - Full CRUD operations for feature toggles

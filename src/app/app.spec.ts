@@ -68,7 +68,7 @@ describe('App', () => {
       {
         connection$: of(mockConnection),
         features$: of(mockFeatures),
-      }
+      },
     );
     const filterSpy = jasmine.createSpyObj('FilterService', [], {
       filteredFeatures$: of(mockFeatures),
@@ -120,19 +120,19 @@ describe('App', () => {
       ],
     }).compileComponents();
     mockYaftService = TestBed.inject(
-      YaftProviderService
+      YaftProviderService,
     ) as jasmine.SpyObj<YaftProviderService>;
     _mockFilterService = TestBed.inject(
-      FilterService
+      FilterService,
     ) as jasmine.SpyObj<FilterService>;
     mockExportService = TestBed.inject(
-      ExportService
+      ExportService,
     ) as jasmine.SpyObj<ExportService>;
     mockErrorHandler = TestBed.inject(
-      ErrorHandlerService
+      ErrorHandlerService,
     ) as jasmine.SpyObj<ErrorHandlerService>;
     mockBulkOperations = TestBed.inject(
-      BulkOperationsService
+      BulkOperationsService,
     ) as jasmine.SpyObj<BulkOperationsService>;
   });
   beforeEach(() => {
@@ -154,7 +154,7 @@ describe('App', () => {
       expect(component.connectionForm).toBeDefined();
       expect(component.featureForm).toBeDefined();
       expect(component.connectionForm.get('providerType')?.value).toBe(
-        ProviderType.API_SERVICE
+        ProviderType.API_SERVICE,
       );
     });
   });
@@ -197,7 +197,7 @@ describe('App', () => {
         isConnected: true,
       };
       expect(component.currentDisplayedColumns).toEqual(
-        component.displayedColumns
+        component.displayedColumns,
       );
     });
   });
@@ -215,7 +215,7 @@ describe('App', () => {
     it('should handle connection failure', () => {
       const errorMsg = 'Connection failed';
       mockYaftService.connect.and.returnValue(
-        throwError(() => new Error(errorMsg))
+        throwError(() => new Error(errorMsg)),
       );
       component.connectionForm.patchValue({
         providerType: ProviderType.API_SERVICE,
@@ -234,7 +234,7 @@ describe('App', () => {
       });
       component.onConnect();
       expect(mockYaftService.setCollectionSecret).toHaveBeenCalledWith(
-        'test-secret'
+        'test-secret',
       );
     });
     it('should not connect with invalid form', () => {
@@ -270,7 +270,7 @@ describe('App', () => {
     });
     it('should handle feature creation failure', () => {
       mockYaftService.createFeature.and.returnValue(
-        throwError(() => new Error('Creation failed'))
+        throwError(() => new Error('Creation failed')),
       );
       component.featureForm.patchValue({
         key: 'new-feature',
@@ -288,7 +288,7 @@ describe('App', () => {
       expect(mockYaftService.updateFeature).toHaveBeenCalledWith(
         feature.key,
         { value: 'false' },
-        feature.secret
+        feature.secret,
       );
     });
     it('should not toggle feature without secret', () => {
@@ -299,7 +299,7 @@ describe('App', () => {
       component.onToggleFeature(featureWithoutSecret, false);
       expect(mockYaftService.updateFeature).not.toHaveBeenCalled();
       expect(component.alertMessage).toContain(
-        'Cannot toggle feature without secret'
+        'Cannot toggle feature without secret',
       );
     });
     it('should edit feature', () => {
@@ -327,7 +327,7 @@ describe('App', () => {
       expect(window.confirm).toHaveBeenCalled();
       expect(mockYaftService.deleteFeature).toHaveBeenCalledWith(
         feature.key,
-        feature.secret
+        feature.secret,
       );
     });
     it('should not delete feature without confirmation', () => {
@@ -342,7 +342,7 @@ describe('App', () => {
       const mockEvent = {
         input: { value: 'valid-tag' },
         value: 'valid-tag',
-        chipInput: {} as MatChipInputEvent['chipInput']
+        chipInput: {} as MatChipInputEvent['chipInput'],
       } as MatChipInputEvent;
       component.featureForm.get('tags')?.setValue(['existing-tag']);
       component.addTag(mockEvent);
@@ -354,11 +354,11 @@ describe('App', () => {
       const mockEvent = {
         input: { value: 'Invalid Tag!' },
         value: 'Invalid Tag!',
-        chipInput: {} as MatChipInputEvent['chipInput']
+        chipInput: {} as MatChipInputEvent['chipInput'],
       } as MatChipInputEvent;
       component.addTag(mockEvent);
       expect(component.alertMessage).toContain(
-        'Tags must be lowercase, alphanumeric, and hyphens only'
+        'Tags must be lowercase, alphanumeric, and hyphens only',
       );
       expect(mockEvent.input.value).toBe('');
     });
@@ -366,7 +366,7 @@ describe('App', () => {
       const mockEvent = {
         input: { value: 'existing-tag' },
         value: 'existing-tag',
-        chipInput: {} as MatChipInputEvent['chipInput']
+        chipInput: {} as MatChipInputEvent['chipInput'],
       } as MatChipInputEvent;
       component.featureForm.get('tags')?.setValue(['existing-tag']);
       component.addTag(mockEvent);
@@ -433,7 +433,7 @@ describe('App', () => {
         errors: [],
       };
       mockExportService.importFromFile.and.returnValue(
-        Promise.resolve(mockResult)
+        Promise.resolve(mockResult),
       );
       spyOn(window, 'confirm').and.returnValue(true);
       component.onFilesDropped({ 0: mockFile, length: 1 } as FileList);
@@ -443,18 +443,18 @@ describe('App', () => {
   describe('Utility Methods', () => {
     it('should copy text to clipboard', () => {
       spyOn(navigator.clipboard, 'writeText').and.returnValue(
-        Promise.resolve()
+        Promise.resolve(),
       );
       const feature = mockFeatures[0];
       component.onCopySecret(feature);
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        feature.secret
+        feature.secret,
       );
     });
     it('should check if feature has secret', () => {
       expect(component.hasSecret(mockFeatures[0])).toBe(true);
       expect(component.hasSecret({ key: 'no-secret', value: 'true' })).toBe(
-        false
+        false,
       );
     });
     it('should get feature status from service', () => {
@@ -466,7 +466,7 @@ describe('App', () => {
       mockYaftService.getFeatureStatus.and.returnValue(mockStatus);
       const status = component.getFeatureStatus(mockFeatures[0]);
       expect(mockYaftService.getFeatureStatus).toHaveBeenCalledWith(
-        mockFeatures[0]
+        mockFeatures[0],
       );
       expect(status).toBe(mockStatus);
     });

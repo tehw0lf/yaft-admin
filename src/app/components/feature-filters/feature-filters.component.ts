@@ -1,4 +1,10 @@
-import { Component, OnInit, OnDestroy, inject, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 
 import { Subject, takeUntil, debounceTime } from 'rxjs';
@@ -31,8 +37,8 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
     MatChipsModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatCardModule
-],
+    MatCardModule,
+  ],
   template: `
     <mat-card class="filter-card">
       <mat-card-header>
@@ -41,9 +47,12 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
           Filters & Search
         </mat-card-title>
         <div class="header-actions">
-          <button mat-icon-button (click)="clearFilters()"
+          <button
+            mat-icon-button
+            (click)="clearFilters()"
             [disabled]="!hasActiveFilters()"
-            matTooltip="Clear all filters">
+            matTooltip="Clear all filters"
+          >
             <mat-icon>clear</mat-icon>
           </button>
         </div>
@@ -54,17 +63,19 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
             <!-- Search Input -->
             <mat-form-field appearance="outline" class="search-field">
               <mat-label>Search Features</mat-label>
-              <input matInput formControlName="searchText"
-                placeholder="Search by key...">
+              <input
+                matInput
+                formControlName="searchText"
+                placeholder="Search by key..."
+              />
               <mat-icon matPrefix>search</mat-icon>
               @if (filterForm.get('searchText')?.value) {
-                <button mat-icon-button matSuffix
-                  (click)="clearSearch()">
+                <button mat-icon-button matSuffix (click)="clearSearch()">
                   <mat-icon>close</mat-icon>
                 </button>
               }
             </mat-form-field>
-    
+
             <!-- Status Filter -->
             <mat-form-field appearance="outline">
               <mat-label>Status</mat-label>
@@ -76,7 +87,7 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
               <mat-hint>Filter by feature status</mat-hint>
             </mat-form-field>
           </div>
-    
+
           <!-- Tags Filter Row -->
           <div class="filter-row tags-filter-row">
             <mat-form-field appearance="outline" class="tags-filter-field">
@@ -84,30 +95,42 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
               <mat-select formControlName="tags" multiple>
                 @for (tag of availableTags; track tag) {
                   <mat-option [value]="tag">
-                    {{tag}}
+                    {{ tag }}
                   </mat-option>
                 }
               </mat-select>
               <mat-hint>Select tags to filter features</mat-hint>
             </mat-form-field>
           </div>
-    
+
           <div class="filter-row">
             <!-- Date Range -->
             <div class="date-range-container">
               <mat-form-field appearance="outline">
                 <mat-label>Start Date</mat-label>
-                <input matInput [matDatepicker]="startPicker"
-                  formControlName="dateStart">
-                <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+                <input
+                  matInput
+                  [matDatepicker]="startPicker"
+                  formControlName="dateStart"
+                />
+                <mat-datepicker-toggle
+                  matSuffix
+                  [for]="startPicker"
+                ></mat-datepicker-toggle>
                 <mat-datepicker #startPicker></mat-datepicker>
               </mat-form-field>
-    
+
               <mat-form-field appearance="outline">
                 <mat-label>End Date</mat-label>
-                <input matInput [matDatepicker]="endPicker"
-                  formControlName="dateEnd">
-                <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+                <input
+                  matInput
+                  [matDatepicker]="endPicker"
+                  formControlName="dateEnd"
+                />
+                <mat-datepicker-toggle
+                  matSuffix
+                  [for]="endPicker"
+                ></mat-datepicker-toggle>
                 <mat-datepicker #endPicker></mat-datepicker>
               </mat-form-field>
             </div>
@@ -115,61 +138,63 @@ import { Feature, FeatureFilter } from '../../models/feature.model';
         </form>
       </mat-card-content>
     </mat-card>
-    `,
+  `,
   changeDetection: ChangeDetectionStrategy.Eager,
-  styles: [`
-    .filter-card {
-      margin-bottom: 16px;
-    }
+  styles: [
+    `
+      .filter-card {
+        margin-bottom: 16px;
+      }
 
-    .filter-card .mat-card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      
-      .mat-card-title {
+      .filter-card .mat-card-header {
         display: flex;
         align-items: center;
-        gap: 8px;
-      }
-      
-      .header-actions {
-        display: flex;
-        gap: 8px;
-      }
-    }
+        justify-content: space-between;
 
-    .filter-form {
-      .filter-row {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 16px;
-        margin-bottom: 16px;
-        
-        &:last-child {
-          margin-bottom: 0;
+        .mat-card-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
-        
-        @media (max-width: 768px) {
-          grid-template-columns: 1fr;
+
+        .header-actions {
+          display: flex;
+          gap: 8px;
         }
       }
-      
-      .search-field {
-        width: 100%;
-      }
-      
-      .date-range-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        
-        @media (max-width: 576px) {
-          grid-template-columns: 1fr;
+
+      .filter-form {
+        .filter-row {
+          display: grid;
+          grid-template-columns: 2fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        .search-field {
+          width: 100%;
+        }
+
+        .date-range-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+
+          @media (max-width: 576px) {
+            grid-template-columns: 1fr;
+          }
         }
       }
-    }
-  `]
+    `,
+  ],
 })
 export class FeatureFiltersComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
@@ -177,7 +202,7 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
   private yaftService = inject(YaftProviderService);
 
   private destroy$ = new Subject<void>();
-  
+
   filterForm: FormGroup;
   availableTags: string[] = [];
 
@@ -188,32 +213,31 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Subscribe to form changes with debounce
     this.filterForm.valueChanges
-      .pipe(
-        debounceTime(300),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(formValue => {
+      .pipe(debounceTime(300), takeUntil(this.destroy$))
+      .subscribe((formValue) => {
         this.updateFilters(formValue);
       });
-
 
     // Initialize form with current filter values
     this.filterService.filter$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(filter => {
-        this.filterForm.patchValue({
-          searchText: filter.searchText,
-          status: filter.status,
-          tags: filter.tags,
-          dateStart: filter.dateRange.start,
-          dateEnd: filter.dateRange.end
-        }, { emitEvent: false });
+      .subscribe((filter) => {
+        this.filterForm.patchValue(
+          {
+            searchText: filter.searchText,
+            status: filter.status,
+            tags: filter.tags,
+            dateStart: filter.dateRange.start,
+            dateEnd: filter.dateRange.end,
+          },
+          { emitEvent: false },
+        );
       });
 
     // Subscribe to features to extract available tags
     this.yaftService.features$
       .pipe(takeUntil(this.destroy$))
-      .subscribe(features => {
+      .subscribe((features) => {
         this.updateAvailableTags(features);
       });
   }
@@ -229,19 +253,25 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
       status: [[]],
       tags: [[]],
       dateStart: [null],
-      dateEnd: [null]
+      dateEnd: [null],
     });
   }
 
-  private updateFilters(formValue: { searchText?: string; status?: string[]; tags?: string[]; dateStart?: Date | null; dateEnd?: Date | null }): void {
+  private updateFilters(formValue: {
+    searchText?: string;
+    status?: string[];
+    tags?: string[];
+    dateStart?: Date | null;
+    dateEnd?: Date | null;
+  }): void {
     const filter: FeatureFilter = {
       searchText: formValue.searchText || '',
       status: formValue.status || [],
       tags: formValue.tags || [],
       dateRange: {
         start: formValue.dateStart,
-        end: formValue.dateEnd
-      }
+        end: formValue.dateEnd,
+      },
     };
 
     this.filterService.updateFilter(filter);
@@ -268,13 +298,13 @@ export class FeatureFiltersComponent implements OnInit, OnDestroy {
 
   private updateAvailableTags(features: Feature[]): void {
     const tagSet = new Set<string>();
-    
-    features.forEach(feature => {
+
+    features.forEach((feature) => {
       if (feature.tags && Array.isArray(feature.tags)) {
         feature.tags.forEach((tag: string) => tagSet.add(tag));
       }
     });
-    
+
     this.availableTags = Array.from(tagSet).sort();
   }
 }

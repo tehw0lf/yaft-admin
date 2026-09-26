@@ -15,7 +15,7 @@ export interface ImportResult {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ExportService {
   private readonly EXPORT_VERSION = '1.0';
@@ -24,39 +24,39 @@ export class ExportService {
     const exportData: ExportData = {
       timestamp: new Date().toISOString(),
       version: this.EXPORT_VERSION,
-      features: features
+      features: features,
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
+      type: 'application/json',
     });
 
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `yaft-features-${new Date().toISOString().split('T')[0]}.json`;
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     window.URL.revokeObjectURL(url);
   }
 
   exportBooleanJson(booleanData: Record<string, boolean>): void {
     const blob = new Blob([JSON.stringify(booleanData, null, 2)], {
-      type: 'application/json'
+      type: 'application/json',
     });
 
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `yaft-boolean-toggles-${new Date().toISOString().split('T')[0]}.json`;
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     window.URL.revokeObjectURL(url);
   }
 
@@ -64,13 +64,15 @@ export class ExportService {
     const headers = ['Key', 'Value', 'ActiveAt', 'DisabledAt', 'HasSecret'];
     const csvContent = [
       headers.join(','),
-      ...features.map(feature => [
-        this.escapeCsvField(feature.key),
-        this.escapeCsvField(feature.value),
-        this.escapeCsvField(feature.activeAt || ''),
-        this.escapeCsvField(feature.disabledAt || ''),
-        this.escapeCsvField(feature.secret ? 'true' : 'false')
-      ].join(','))
+      ...features.map((feature) =>
+        [
+          this.escapeCsvField(feature.key),
+          this.escapeCsvField(feature.value),
+          this.escapeCsvField(feature.activeAt || ''),
+          this.escapeCsvField(feature.disabledAt || ''),
+          this.escapeCsvField(feature.secret ? 'true' : 'false'),
+        ].join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -78,11 +80,11 @@ export class ExportService {
     const link = document.createElement('a');
     link.href = url;
     link.download = `yaft-features-${new Date().toISOString().split('T')[0]}.csv`;
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     window.URL.revokeObjectURL(url);
   }
 
@@ -90,10 +92,12 @@ export class ExportService {
     const headers = ['Key', 'Value'];
     const csvContent = [
       headers.join(','),
-      ...features.map(feature => [
-        this.escapeCsvField(feature.key),
-        this.escapeCsvField(feature.value === 'true' ? 'true' : 'false')
-      ].join(','))
+      ...features.map((feature) =>
+        [
+          this.escapeCsvField(feature.key),
+          this.escapeCsvField(feature.value === 'true' ? 'true' : 'false'),
+        ].join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -101,18 +105,18 @@ export class ExportService {
     const link = document.createElement('a');
     link.href = url;
     link.download = `yaft-boolean-toggles-${new Date().toISOString().split('T')[0]}.csv`;
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     window.URL.revokeObjectURL(url);
   }
 
   async importFromFile(file: File): Promise<ImportResult> {
     try {
       const fileContent = await this.readFileAsText(file);
-      
+
       if (file.name.toLowerCase().endsWith('.json')) {
         return this.importFromJson(fileContent);
       } else if (file.name.toLowerCase().endsWith('.csv')) {
@@ -122,7 +126,7 @@ export class ExportService {
           success: false,
           features: [],
           errors: ['Unsupported file format. Please use JSON or CSV files.'],
-          warnings: []
+          warnings: [],
         };
       }
     } catch (error) {
@@ -130,7 +134,7 @@ export class ExportService {
         success: false,
         features: [],
         errors: [`Failed to read file: ${error}`],
-        warnings: []
+        warnings: [],
       };
     }
   }
@@ -149,18 +153,20 @@ export class ExportService {
       success: false,
       features: [],
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     try {
       const data = JSON.parse(content);
-      
+
       // Check if it's our export format
       if (data.features && Array.isArray(data.features)) {
         result.features = data.features;
-        
+
         if (data.version && data.version !== this.EXPORT_VERSION) {
-          result.warnings.push(`Import version (${data.version}) differs from current version (${this.EXPORT_VERSION})`);
+          result.warnings.push(
+            `Import version (${data.version}) differs from current version (${this.EXPORT_VERSION})`,
+          );
         }
       } else if (Array.isArray(data)) {
         // Direct array of features
@@ -172,7 +178,9 @@ export class ExportService {
           result.warnings.push('No valid features found in object format');
         }
       } else {
-        result.errors.push('Invalid JSON format. Expected array of features, export format, or object with feature keys.');
+        result.errors.push(
+          'Invalid JSON format. Expected array of features, export format, or object with feature keys.',
+        );
         return result;
       }
 
@@ -183,7 +191,6 @@ export class ExportService {
       result.warnings.push(...validationResult.warnings);
 
       result.success = result.features.length > 0;
-      
     } catch (error) {
       result.errors.push(`Invalid JSON format: ${error}`);
     }
@@ -196,14 +203,16 @@ export class ExportService {
       success: false,
       features: [],
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     try {
-      const lines = content.split('\n').filter(line => line.trim());
-      
+      const lines = content.split('\n').filter((line) => line.trim());
+
       if (lines.length < 2) {
-        result.errors.push('CSV file must contain at least a header row and one data row');
+        result.errors.push(
+          'CSV file must contain at least a header row and one data row',
+        );
         return result;
       }
 
@@ -235,7 +244,6 @@ export class ExportService {
       result.warnings.push(...validationResult.warnings);
 
       result.success = result.features.length > 0;
-
     } catch (error) {
       result.errors.push(`Invalid CSV format: ${error}`);
     }
@@ -255,7 +263,7 @@ export class ExportService {
 
     for (let i = 0; i < features.length; i++) {
       const feature = features[i];
-      
+
       // Check required fields
       if (!feature.key || typeof feature.key !== 'string') {
         warnings.push(`Feature ${i + 1}: Missing or invalid key, skipping`);
@@ -264,7 +272,9 @@ export class ExportService {
 
       // Check for duplicate keys
       if (seenKeys.has(feature.key)) {
-        warnings.push(`Feature ${i + 1}: Duplicate key '${feature.key}', skipping`);
+        warnings.push(
+          `Feature ${i + 1}: Duplicate key '${feature.key}', skipping`,
+        );
         continue;
       }
       seenKeys.add(feature.key);
@@ -281,9 +291,11 @@ export class ExportService {
       if (cleanedFeature.activeAt && cleanedFeature.disabledAt) {
         const activeDate = new Date(cleanedFeature.activeAt);
         const disabledDate = new Date(cleanedFeature.disabledAt);
-        
+
         if (activeDate >= disabledDate) {
-          warnings.push(`Feature '${cleanedFeature.key}': Active time must be before disabled time`);
+          warnings.push(
+            `Feature '${cleanedFeature.key}': Active time must be before disabled time`,
+          );
         }
       }
 
@@ -295,7 +307,7 @@ export class ExportService {
 
   private validateAndCleanDate(date: string | null | undefined): string | null {
     if (!date) return null;
-    
+
     try {
       const parsedDate = new Date(date);
       return isNaN(parsedDate.getTime()) ? null : parsedDate.toISOString();
@@ -308,10 +320,10 @@ export class ExportService {
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
-    
+
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      
+
       if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
         inQuotes = !inQuotes;
       } else if (char === ',' && !inQuotes) {
@@ -321,9 +333,11 @@ export class ExportService {
         current += char;
       }
     }
-    
+
     result.push(current.trim());
-    return result.map(field => field.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"'));
+    return result.map((field) =>
+      field.replace(/^"(.*)"$/, '$1').replace(/\\"/g, '"'),
+    );
   }
 
   private convertObjectToFeatures(data: Record<string, unknown>): Feature[] {
@@ -331,7 +345,11 @@ export class ExportService {
 
     for (const [key, value] of Object.entries(data)) {
       try {
-        if (typeof value === 'boolean' || value === 'true' || value === 'false') {
+        if (
+          typeof value === 'boolean' ||
+          value === 'true' ||
+          value === 'false'
+        ) {
           // Boolean format: { "toggleName": true }
           features.push({
             key: key,
@@ -355,7 +373,7 @@ export class ExportService {
         console.warn(`Failed to convert feature '${key}':`, error);
       }
     }
-    
+
     return features;
   }
 

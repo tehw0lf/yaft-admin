@@ -3,7 +3,10 @@ import { nxE2EPreset } from '@nx/playwright/preset';
 import { defineConfig, devices } from '@playwright/test';
 
 // For CI, you may want to set BASE_URL to the deployed application.
-const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
+// Must match the serve target's port in project.json. Each workspace has its
+// own, so a dev server another repo left running is never reused by mistake.
+const port = 4214;
+const baseURL = process.env['BASE_URL'] || `http://localhost:${port}`;
 
 /**
  * Read environment variables from file.
@@ -25,8 +28,8 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npx nx run yaft-admin:serve',
-    url: 'http://localhost:4200',
-    reuseExistingServer: true,
+    url: `http://localhost:${port}`,
+    reuseExistingServer: !process.env.CI,
     cwd: workspaceRoot,
   },
   projects: [

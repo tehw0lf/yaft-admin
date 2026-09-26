@@ -45,7 +45,7 @@ export enum ProviderType {
   API_SERVICE = 'api-service',
   LOCAL_STORAGE = 'local-storage',
   API_SERVICE_BOOLEAN = 'api-service-boolean',
-  LOCAL_STORAGE_BOOLEAN = 'local-storage-boolean'
+  LOCAL_STORAGE_BOOLEAN = 'local-storage-boolean',
 }
 
 export interface ProviderConnection {

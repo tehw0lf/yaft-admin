@@ -10,7 +10,12 @@ export interface HeartbeatData {
 }
 
 export interface WebSocketMessage {
-  type: 'feature_update' | 'feature_create' | 'feature_delete' | 'connection_status' | 'heartbeat';
+  type:
+    | 'feature_update'
+    | 'feature_create'
+    | 'feature_delete'
+    | 'connection_status'
+    | 'heartbeat';
   data: FeatureUpdateMessage | HeartbeatData;
   timestamp: string;
   userId?: string;
@@ -31,7 +36,7 @@ export interface ConnectionStatus {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class WebSocketService implements OnDestroy {
   private errorHandler = inject(ErrorHandlerService);
@@ -40,24 +45,24 @@ export class WebSocketService implements OnDestroy {
   private socket$?: WebSocketSubject<WebSocketMessage>;
   private isConnectedSubject = new BehaviorSubject<ConnectionStatus>({
     isConnected: false,
-    reconnectAttempts: 0
+    reconnectAttempts: 0,
   });
-  
+
   // Message subjects for different types
   private featureUpdatesSubject = new Subject<FeatureUpdateMessage>();
   private heartbeatSubject = new Subject<Date>();
-  
+
   // Configuration
   private wsUrl = 'ws://localhost:8080/ws'; // Default WebSocket URL
   private reconnectInterval = 5000;
   private maxReconnectAttempts = 10;
   private heartbeatInterval = 30000;
-  
+
   // Public observables
   public connectionStatus$ = this.isConnectedSubject.asObservable();
   public featureUpdates$ = this.featureUpdatesSubject.asObservable();
   public heartbeat$ = this.heartbeatSubject.asObservable();
-  
+
   constructor() {
     this.setupHeartbeat();
   }
@@ -73,7 +78,7 @@ export class WebSocketService implements OnDestroy {
     if (wsUrl) {
       this.wsUrl = wsUrl;
     }
-    
+
     if (this.socket$) {
       this.disconnect();
     }
@@ -87,10 +92,10 @@ export class WebSocketService implements OnDestroy {
       this.socket$.complete();
       this.socket$ = undefined;
     }
-    
+
     this.updateConnectionStatus({
       isConnected: false,
-      reconnectAttempts: 0
+      reconnectAttempts: 0,
     });
   }
 
@@ -99,9 +104,9 @@ export class WebSocketService implements OnDestroy {
     if (this.socket$ && this.isConnectedSubject.value.isConnected) {
       const fullMessage: WebSocketMessage = {
         ...message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
+
       this.socket$.next(fullMessage);
     } else {
       this.errorHandler.showWarningNotification('Not connected to WebSocket');
@@ -109,14 +114,17 @@ export class WebSocketService implements OnDestroy {
   }
 
   // Send feature update notification
-  notifyFeatureUpdate(feature: Feature, action: 'create' | 'update' | 'delete'): void {
+  notifyFeatureUpdate(
+    feature: Feature,
+    action: 'create' | 'update' | 'delete',
+  ): void {
     this.sendMessage({
       type: 'feature_update',
       data: {
         feature,
         action,
-        userId: this.getCurrentUserId()
-      }
+        userId: this.getCurrentUserId(),
+      },
     });
   }
 
@@ -140,21 +148,24 @@ export class WebSocketService implements OnDestroy {
             this.updateConnectionStatus({
               isConnected: true,
               reconnectAttempts: 0,
-              lastPing: new Date()
+              lastPing: new Date(),
             });
-            this.errorHandler.showSuccessNotification('Real-time updates enabled');
-          }
+            this.errorHandler.showSuccessNotification(
+              'Real-time updates enabled',
+            );
+          },
         },
         closeObserver: {
           next: () => {
             console.log('WebSocket disconnected');
             this.updateConnectionStatus({
               isConnected: false,
-              reconnectAttempts: this.isConnectedSubject.value.reconnectAttempts
+              reconnectAttempts:
+                this.isConnectedSubject.value.reconnectAttempts,
             });
             this.scheduleReconnect();
-          }
-        }
+          },
+        },
       });
 
       // Subscribe to messages
@@ -170,33 +181,38 @@ export class WebSocketService implements OnDestroy {
               this.updateConnectionStatus({
                 isConnected: false,
                 reconnectAttempts: retryCount,
-                error: error.message || 'Connection failed'
+                error: error.message || 'Connection failed',
               });
               return timer(this.reconnectInterval * retryCount);
-            }
+            },
           }),
-          catchError(error => {
+          catchError((error) => {
             console.error('WebSocket error:', error);
-            this.errorHandler.showErrorNotification('Real-time connection failed');
+            this.errorHandler.showErrorNotification(
+              'Real-time connection failed',
+            );
             this.updateConnectionStatus({
               isConnected: false,
               reconnectAttempts: this.maxReconnectAttempts,
-              error: error.message || 'Connection failed'
+              error: error.message || 'Connection failed',
             });
             return EMPTY;
-          })
+          }),
         )
-        .subscribe(message => {
+        .subscribe((message) => {
           this.handleMessage(message);
         });
-
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
-      this.errorHandler.showErrorNotification('Failed to establish real-time connection');
+      this.errorHandler.showErrorNotification(
+        'Failed to establish real-time connection',
+      );
     }
   }
 
-  private isFeatureUpdateMessage(data: FeatureUpdateMessage | HeartbeatData): data is FeatureUpdateMessage {
+  private isFeatureUpdateMessage(
+    data: FeatureUpdateMessage | HeartbeatData,
+  ): data is FeatureUpdateMessage {
     return 'feature' in data && 'action' in data;
   }
 
@@ -238,17 +254,21 @@ export class WebSocketService implements OnDestroy {
     if (data.userId === this.getCurrentUserId()) {
       return;
     }
-    
+
     this.featureUpdatesSubject.next(data);
-    
+
     // Show notification for updates from other users
     const userName = data.userName || 'Another user';
-    const action = data.action === 'create' ? 'created' : 
-                  data.action === 'update' ? 'updated' : 'deleted';
-    
+    const action =
+      data.action === 'create'
+        ? 'created'
+        : data.action === 'update'
+          ? 'updated'
+          : 'deleted';
+
     this.errorHandler.showInfoNotification(
       `${userName} ${action} feature "${data.feature.key}"`,
-      3000
+      3000,
     );
   }
 
@@ -256,24 +276,29 @@ export class WebSocketService implements OnDestroy {
     this.heartbeatSubject.next(new Date());
     this.updateConnectionStatus({
       ...this.isConnectedSubject.value,
-      lastPing: new Date()
+      lastPing: new Date(),
     });
   }
 
   private scheduleReconnect(): void {
     const currentStatus = this.isConnectedSubject.value;
-    
+
     if (currentStatus.reconnectAttempts < this.maxReconnectAttempts) {
-      const delay = this.reconnectInterval * (currentStatus.reconnectAttempts + 1);
-      
+      const delay =
+        this.reconnectInterval * (currentStatus.reconnectAttempts + 1);
+
       timer(delay)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => {
-          console.log(`Attempting to reconnect (${currentStatus.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+          console.log(
+            `Attempting to reconnect (${currentStatus.reconnectAttempts + 1}/${this.maxReconnectAttempts})`,
+          );
           this.createConnection();
         });
     } else {
-      this.errorHandler.showErrorNotification('Real-time connection failed after multiple attempts');
+      this.errorHandler.showErrorNotification(
+        'Real-time connection failed after multiple attempts',
+      );
     }
   }
 
@@ -284,7 +309,7 @@ export class WebSocketService implements OnDestroy {
         if (this.isConnected()) {
           this.sendMessage({
             type: 'heartbeat',
-            data: { timestamp: Date.now() }
+            data: { timestamp: Date.now() },
           });
         }
       });
@@ -294,7 +319,7 @@ export class WebSocketService implements OnDestroy {
     const currentStatus = this.isConnectedSubject.value;
     this.isConnectedSubject.next({
       ...currentStatus,
-      ...status
+      ...status,
     });
   }
 
@@ -331,8 +356,11 @@ export class WebSocketService implements OnDestroy {
     heartbeatInterval?: number;
   }): void {
     if (options.wsUrl) this.wsUrl = options.wsUrl;
-    if (options.reconnectInterval) this.reconnectInterval = options.reconnectInterval;
-    if (options.maxReconnectAttempts) this.maxReconnectAttempts = options.maxReconnectAttempts;
-    if (options.heartbeatInterval) this.heartbeatInterval = options.heartbeatInterval;
+    if (options.reconnectInterval)
+      this.reconnectInterval = options.reconnectInterval;
+    if (options.maxReconnectAttempts)
+      this.maxReconnectAttempts = options.maxReconnectAttempts;
+    if (options.heartbeatInterval)
+      this.heartbeatInterval = options.heartbeatInterval;
   }
 }
