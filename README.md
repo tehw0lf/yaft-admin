@@ -38,7 +38,7 @@ npm install
 npm start
 ```
 
-Open your browser to `http://localhost:4200` to access the admin interface.
+Open your browser to `http://localhost:4214` to access the admin interface.
 
 ### Production Build
 
@@ -168,7 +168,7 @@ Schedule automatic feature activation/deactivation:
 
 ```bash
 # Development server
-npm start                    # Start dev server on port 4200
+npm start                    # Start dev server on port 4214
 nx serve yaft-admin          # Alternative serve command
 
 # Building

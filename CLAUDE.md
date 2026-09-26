@@ -47,7 +47,7 @@ YaFT Admin is a standalone Angular application for managing feature toggles acro
 
 ### Building and Serving
 ```bash
-npm start                    # Serve the application (default port 4200)
+npm start                    # Serve the application (port 4214)
 nx serve yaft-admin          # Alternative serve command
 npm run build                # Build for production
 nx build yaft-admin          # Alternative build command
