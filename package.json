@@ -67,8 +67,5 @@
   },
   "nx": {
     "includedScripts": []
-  },
-  "overrides": {
-    "axios": "1.20.0"
   }
 }
