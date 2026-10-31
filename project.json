@@ -1,6 +1,7 @@
 {
   "name": "yaft-admin",
   "$schema": "node_modules/nx/schemas/project-schema.json",
+  "includedScripts": [],
   "projectType": "application",
   "prefix": "app",
   "sourceRoot": "./src",
@@ -50,10 +51,10 @@
     "serve": {
       "continuous": true,
       "executor": "@angular/build:dev-server",
+      "defaultConfiguration": "development",
       "options": {
         "port": 4214
       },
-      "defaultConfiguration": "development",
       "configurations": {
         "production": {
           "buildTarget": "yaft-admin:build:production"
@@ -61,6 +62,9 @@
         "development": {
           "buildTarget": "yaft-admin:build:development"
         }
+      },
+      "readyWhen": {
+        "signal": true
       }
     },
     "extract-i18n": {
@@ -109,6 +113,10 @@
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
+      "readyWhen": {
+        "signal": true
+      },
+      "dependsOn": ["build"],
       "options": {
         "buildTarget": "yaft-admin:build",
         "port": 4200,
